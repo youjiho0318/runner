@@ -1416,22 +1416,56 @@ window.addEventListener("hashchange", function() {
 /* ═══════════════════════════════════════
    기사 숨기기 관리
 ═══════════════════════════════════════ */
-var HIDDEN_KEY   = "hiddenDrivers_v1";   // localStorage 키
+var HIDDEN_KEY   = "hiddenDrivers_v1";   // localStorage 폴백 키
 var HIDDEN_SET   = {};                    // { "이름": true }
 var HIDE_PENDING = {};                    // 모달에서 편집 중인 임시 상태
 var HIDE_CAMP_NOW = "";                   // 현재 탭
 
-/* localStorage 로드 */
+/* API에서 숨김 목록 로드 — 실패 시 localStorage 폴백 */
 function loadHiddenSet() {
+  // 먼저 localStorage로 임시 적용 (빠른 렌더링)
   try {
     var raw = localStorage.getItem(HIDDEN_KEY);
-    HIDDEN_SET = raw ? JSON.parse(raw) : {};
-  } catch(e) { HIDDEN_SET = {}; }
+    if (raw) HIDDEN_SET = JSON.parse(raw);
+  } catch(e) {}
+
+  // 이후 API에서 최신 목록 가져오기 (비동기)
+  var xhr = new XMLHttpRequest();
+  xhr.open("GET", API_URL + "?action=getHidden", true);
+  xhr.timeout = 10000;
+  xhr.onload = function() {
+    try {
+      var res = JSON.parse(xhr.responseText);
+      if (res.ok && Array.isArray(res.names)) {
+        HIDDEN_SET = {};
+        res.names.forEach(function(n){ if(n) HIDDEN_SET[n] = true; });
+        // localStorage에도 동기화
+        try { localStorage.setItem(HIDDEN_KEY, JSON.stringify(HIDDEN_SET)); } catch(e) {}
+        // 이미 화면이 렌더링됐으면 새로고침
+        if (document.getElementById("idx-grid") && document.getElementById("idx-grid").children.length > 0) {
+          showIndex();
+        }
+      }
+    } catch(ex) {}
+  };
+  xhr.onerror = xhr.ontimeout = function() {}; // 실패 시 localStorage 유지
+  xhr.send();
 }
 
-/* localStorage 저장 */
+/* API에 숨김 목록 저장 + localStorage 동기화 */
 function saveHiddenSet() {
+  var names = Object.keys(HIDDEN_SET);
+  var dataJson = JSON.stringify(names);
+
+  // localStorage 즉시 저장
   try { localStorage.setItem(HIDDEN_KEY, JSON.stringify(HIDDEN_SET)); } catch(e) {}
+
+  // API 저장 (비동기)
+  var xhr = new XMLHttpRequest();
+  var url = API_URL + "?action=setHidden&data=" + encodeURIComponent(dataJson);
+  xhr.open("GET", url, true);
+  xhr.timeout = 15000;
+  xhr.send();
 }
 
 /* 숨긴 기사 제외한 기사 목록 반환 */
