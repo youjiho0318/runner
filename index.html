@@ -479,18 +479,28 @@ td.sc.w1:last-child, td.sc.w1:nth-child(9) { border-right: 2px solid var(--borde
 
 /* ── 기사 숨기기 관리 버튼 ── */
 .hide-mgr-btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  margin-top: 12px;
-  background: rgba(255,255,255,.18);
+  display: inline-flex; align-items: center; gap: 7px;
+  margin-top: 14px;
+  background: #2563eb;
   color: #fff;
-  border: 1px solid rgba(255,255,255,.35);
-  border-radius: 10px;
-  padding: 7px 16px;
-  font-size: 12px; font-weight: 600;
+  border: none;
+  border-radius: 12px;
+  padding: 10px 22px;
+  font-size: 13px; font-weight: 700;
   cursor: pointer;
-  transition: background .15s;
+  box-shadow: 0 4px 14px rgba(37,99,235,.45);
+  transition: background .15s, box-shadow .15s, transform .1s;
+  letter-spacing: .01em;
 }
-.hide-mgr-btn:hover { background: rgba(255,255,255,.28); }
+.hide-mgr-btn:hover {
+  background: #1d4ed8;
+  box-shadow: 0 6px 20px rgba(37,99,235,.55);
+  transform: translateY(-1px);
+}
+.hide-mgr-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(37,99,235,.35);
+}
 
 /* ── 숨긴 기사 수 배지 (캠프 카드) ── */
 .hidden-badge {
@@ -892,7 +902,6 @@ var CAMPS = [], BY_CAMP = {};
 /* ═══════════════════════════════════════
    로딩 / 에러 UI
 ═══════════════════════════════════════ */
-/* 인덱스 페이지에 로딩 오버레이를 추가 */
 (function() {
   var overlay = document.createElement("div");
   overlay.id = "load-overlay";
@@ -904,20 +913,56 @@ var CAMPS = [], BY_CAMP = {};
     "<div style=\"width:44px;height:44px;border:3px solid var(--border);"+
     "border-top-color:var(--accent);border-radius:50%;animation:_spin .8s linear infinite\"></div>"+
     "<div style=\"text-align:center\">"+
-      "<div style=\"font-size:13px;color:var(--text2);font-family:JetBrains Mono,monospace\">스케줄 불러오는 중…</div>"+
-      "<div style=\"font-size:11px;color:var(--text3);margin-top:4px\">백업 시트에서 최신 데이터를 가져오고 있습니다 (최대 30초)</div>"+
+      "<div style=\"font-size:15px;color:var(--text);font-weight:700;margin-bottom:6px\">🚚 배송기사 스케줄</div>"+
+      "<div id=\"load-step\" style=\"font-size:13px;color:var(--text2);font-family:JetBrains Mono,monospace\">스케줄 불러오는 중…</div>"+
+      "<div id=\"load-elapsed\" style=\"font-size:11px;color:var(--text3);margin-top:6px\">0초</div>"+
+      "<div style=\"margin-top:12px;width:180px;height:4px;background:var(--border);border-radius:4px;overflow:hidden\">"+
+        "<div id=\"load-bar\" style=\"height:100%;width:0%;background:var(--accent);border-radius:4px;transition:width .5s ease\"></div>"+
+      "</div>"+
     "</div>";
   document.body.appendChild(overlay);
 
-  /* 스피너 애니메이션 */
   var st = document.createElement("style");
   st.textContent = "@keyframes _spin{to{transform:rotate(360deg)}}";
   document.head.appendChild(st);
+
+  // 경과 시간 + 단계 메시지 업데이트
+  var _start = Date.now();
+  var _steps = [
+    {t:0,  msg:"서버 연결 중…",        pct:5 },
+    {t:2,  msg:"백업 시트 읽는 중…",   pct:30},
+    {t:5,  msg:"스케줄 데이터 처리 중…", pct:60},
+    {t:8,  msg:"데이터 거의 다 왔어요!", pct:85},
+    {t:12, msg:"마지막 처리 중…",       pct:92},
+  ];
+  var _timer = setInterval(function() {
+    var sec = Math.round((Date.now() - _start) / 1000);
+    var el = document.getElementById("load-elapsed");
+    var st = document.getElementById("load-step");
+    var bar = document.getElementById("load-bar");
+    if (!el) { clearInterval(_timer); return; }
+    el.textContent = sec + "초 경과";
+    // 단계 메시지
+    var step = _steps[0];
+    for (var i = _steps.length - 1; i >= 0; i--) {
+      if (sec >= _steps[i].t) { step = _steps[i]; break; }
+    }
+    if (st) st.textContent = step.msg;
+    if (bar) bar.style.width = step.pct + "%";
+  }, 1000);
+  window._loadTimer = _timer;
 })();
 
 function hideOverlay() {
+  if (window._loadTimer) { clearInterval(window._loadTimer); window._loadTimer = null; }
+  var bar = document.getElementById("load-bar");
+  if (bar) bar.style.width = "100%";
   var o = document.getElementById("load-overlay");
-  if (o) o.remove();
+  if (o) {
+    o.style.transition = "opacity .3s";
+    o.style.opacity = "0";
+    setTimeout(function(){ if(o.parentNode) o.remove(); }, 300);
+  }
 }
 function showFatalError(msg) {
   var o = document.getElementById("load-overlay");
@@ -1570,8 +1615,8 @@ function showHistoryModal() {
   var container = document.getElementById("hist-weeks");
   container.innerHTML = "";
 
-  /* 이번주 포함 과거 4주 목록 (API가 과거 3주+다음주 반환하므로) */
-  for (var w = 0; w <= 4; w++) {
+  /* 이번주 + 1주 전 + 2주 전 (총 3개) */
+  for (var w = 0; w <= 2; w++) {
     var sun = new Date(thisSun);
     sun.setDate(thisSun.getDate() - w * 7);
     var sunDs = toDS(sun);
@@ -1579,8 +1624,10 @@ function showHistoryModal() {
 
     var btn = document.createElement("button");
     btn.className = "hist-week-btn" + (w === 0 ? " hw-current" : "");
+
+    var label = w === 0 ? "📌 이번 주 (현재)" : w + "주 전";
     btn.innerHTML =
-      "<div>" + (w === 0 ? "📌 이번 주 (현재)" : w + "주 전") + "</div>" +
+      "<div>" + label + "</div>" +
       "<div class='hw-range'>" + fmtFull(sunDs) + " ~ " + fmtFull(satDs) + "</div>";
 
     (function(weekSun, weekSat, isCurrentWeek) {
@@ -1614,35 +1661,45 @@ function loadHistWeek(sunDs, satDs) {
 
 /* 기존 DRIVERS 데이터로 이전 주 렌더링 */
 function renderHistWeek(sunDs, satDs, campName) {
-  /* 현재 캠프 드라이버들 */
-  var drivers = BY_CAMP[campName] || [];
+  var allDrivers = BY_CAMP[campName] || [];
+  var drivers = visibleDrivers(allDrivers);  // 숨긴 기사 제외
 
-  /* 7일 날짜 객체 생성 */
-  var histW1 = [], histW2 = [];
+  /* 선택한 주 7일 날짜 객체 */
+  var histW1 = [];
   for (var i = 0; i < 7; i++) {
     var ds = addD(sunDs, i);
     var dw = new Date(ds + "T00:00:00").getDay();
-    var obj = { ds: ds, dow: dw, dn: KD[dw], peak: false, inSheet: true, isToday: ds === TODAY };
-    histW1.push(obj);
-  }
-  for (var j = 0; j < 7; j++) {
-    var ds2 = addD(addD(sunDs, 7), j);
-    var dw2 = new Date(ds2 + "T00:00:00").getDay();
-    var obj2 = { ds: ds2, dow: dw2, dn: KD[dw2], peak: false, inSheet: true, isToday: ds2 === TODAY };
-    histW2.push(obj2);
+    histW1.push({ ds: ds, dow: dw, dn: KD[dw], peak: false, inSheet: true, isToday: ds === TODAY });
   }
 
-  /* 테이블 렌더링 */
+  /* 스케줄 데이터 있는지 확인 */
+  var hasData = drivers.some(function(d) {
+    return histW1.some(function(w) { return d.schedule[w.ds]; });
+  });
+
   var useGreen = (campName === "백업" || campName === "운영자");
-  document.getElementById("cp-thead-w1").innerHTML = buildWHead(histW1, "w1h", "📅 " + fmtFull(sunDs) + " ~ " + fmtFull(addD(sunDs, 6)));
-  document.getElementById("cp-tbody-w1").innerHTML = buildWRows(drivers, histW1, "w1h", useGreen);
-  document.getElementById("cp-thead-w2").innerHTML = buildWHead(histW2, "w2h", "📅 " + fmtFull(addD(sunDs, 7)) + " ~ " + fmtFull(satDs));
-  document.getElementById("cp-tbody-w2").innerHTML = buildWRows(drivers, histW2, "w2h", useGreen);
-  document.getElementById("mobile-list").innerHTML  = buildMobileCards(drivers, useGreen, histW1, histW2);
 
-  /* 주차 레이블 업데이트 */
-  document.getElementById("wl1-range").textContent = fmtFull(sunDs) + " ~ " + fmtFull(addD(sunDs, 6));
-  document.getElementById("wl2-range").textContent = fmtFull(addD(sunDs, 7)) + " ~ " + fmtFull(satDs);
+  /* 데스크톱 테이블 — 1주차에 선택 주, 2주차는 숨김 */
+  document.getElementById("cp-thead-w1").innerHTML = buildWHead(
+    histW1, "w1h",
+    "📅 " + fmtFull(sunDs) + " ~ " + fmtFull(satDs)
+  );
+  document.getElementById("cp-tbody-w1").innerHTML = hasData
+    ? buildWRows(drivers, histW1, "w1h", useGreen)
+    : "<tr><td colspan='99' style='text-align:center;padding:24px;color:var(--text3);font-size:13px'>📭 해당 기간의 스케줄 데이터가 없습니다</td></tr>";
+
+  /* 2주차 영역 숨기기 */
+  document.getElementById("wl2-badge").style.display = "none";
+  document.getElementById("wl2-range").textContent = "";
+  document.getElementById("cp-thead-w2").innerHTML = "";
+  document.getElementById("cp-tbody-w2").innerHTML = "";
+
+  /* 모바일 카드 — 1주차만 */
+  document.getElementById("mobile-list").innerHTML = buildMobileCards(drivers, useGreen, histW1, []);
+
+  /* 주차 레이블 */
+  document.getElementById("wl1-range").textContent = fmtFull(sunDs) + " ~ " + fmtFull(satDs);
+  document.getElementById("wl1-badge").style.display = "";
 
   /* 배너 표시 */
   HIST_MODE = true;
@@ -1663,6 +1720,9 @@ function renderHistWeek(sunDs, satDs, campName) {
 function backToToday() {
   HIST_MODE = false;
   document.getElementById("hist-banner").style.display = "none";
+  // 2주차 배지 복원
+  var b2 = document.getElementById("wl2-badge");
+  if (b2) b2.style.display = "";
   var campName = document.getElementById("cp-title").textContent;
   if (campName) showCamp(campName);
 }
