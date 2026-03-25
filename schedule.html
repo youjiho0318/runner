@@ -1441,8 +1441,10 @@ function loadHiddenSet() {
         res.names.forEach(function(n){ if(n) HIDDEN_SET[n] = true; });
         // localStorage에도 동기화
         try { localStorage.setItem(HIDDEN_KEY, JSON.stringify(HIDDEN_SET)); } catch(e) {}
-        // 이미 화면이 렌더링됐으면 새로고침
-        if (document.getElementById("idx-grid") && document.getElementById("idx-grid").children.length > 0) {
+        // 인덱스 페이지가 활성화된 경우에만 새로고침 (캠프 페이지 강제 이동 방지)
+        var pgIdx = document.getElementById("pg-index");
+        var pgCmp = document.getElementById("pg-camp");
+        if (pgIdx && pgIdx.classList.contains("on") && !(pgCmp && pgCmp.classList.contains("on"))) {
           showIndex();
         }
       }
