@@ -1924,6 +1924,69 @@ function renderLocBody(campName, isBackup) {
       "</div>";
     body.appendChild(row);
   });
+  // 캠프 위치 데이터를 저장할 변수
+let campLocationData = {};
+
+// 페이지 로드 시 또는 필요할 때 캠프 위치를 서버에서 가져오는 함수
+async function fetchCampLocations() {
+  const btnLoc = document.getElementById('btn-loc');
+  btnLoc.classList.add('loading'); // 로딩 상태 표시
+  
+  try {
+    // 본인의 앱스스크립트 URL (기존 스케줄 불러오는 URL과 동일)
+    const scriptUrl = "YOUR_GAS_DEPLOY_URL"; 
+    const response = await fetch(`${scriptUrl}?action=getCampLocations`);
+    const data = await response.json();
+    
+    if (data.ok) {
+      campLocationData = data.locations;
+    }
+  } catch (e) {
+    console.error("캠프 위치 로드 실패:", e);
+  } finally {
+    btnLoc.classList.remove('loading');
+  }
+}
+
+// 모달을 열 때 데이터를 화면에 그림
+function showLocModal() {
+  const modal = document.getElementById('loc-modal');
+  const body = document.getElementById('loc-body');
+  
+  modal.style.display = 'flex';
+  
+  // 데이터가 없으면 먼저 가져옴
+  if (Object.keys(campLocationData).length === 0) {
+    body.innerHTML = '<div class="loc-loading">불러오는 중…</div>';
+    fetchCampLocations().then(() => renderLocList());
+  } else {
+    renderLocList();
+  }
+}
+
+// 실제 리스트를 그리는 함수
+function renderLocList() {
+  const body = document.getElementById('loc-body');
+  const entries = Object.entries(campLocationData);
+
+  if (entries.length === 0) {
+    body.innerHTML = '<div class="loc-empty">등록된 캠프 위치 정보가 없습니다.<br>구글 시트 [캠프위치] 시트를 확인하세요.</div>';
+    return;
+  }
+
+  body.innerHTML = entries.map(([name, addr]) => `
+    <div class="loc-row">
+      <div class="loc-camp-name">${name}</div>
+      <div class="loc-address">${addr}</div>
+      <a href="https://map.kakao.com/link/search/${encodeURIComponent(addr)}" 
+         target="_blank" class="loc-map-btn">📍 지도</a>
+    </div>
+  `).join('');
+}
+
+function closeLocModal() {
+  document.getElementById('loc-modal').style.display = 'none';
+}
 }
 
 function closeLocModal() {
