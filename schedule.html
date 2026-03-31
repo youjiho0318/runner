@@ -409,9 +409,7 @@ th.toh  {
   background: rgba(37,99,235,.15) !important; color: var(--accent) !important;
   border-top: 2px solid var(--accent);
 }
-th.fire-col { background: rgba(239,68,68,.07) !important; }
-th.fire-col.w1h { background: rgba(239,68,68,.1) !important; }
-th.fire-col.w2h { background: rgba(239,68,68,.08) !important; }
+/* fire-col 헤더: 별도 배경 없음 - 기존 w1h/w2h 색상 유지 */
 .dnum { display: block; font-size: 15px; font-weight: 700; font-family: "JetBrains Mono", monospace; line-height: 1; }
 .dnum-wrap { display: flex; align-items: center; justify-content: center; gap: 2px; }
 .dfire-left { font-size: 11px; line-height: 1; }
@@ -437,7 +435,7 @@ td.sc.w1  { background: var(--w1bg); }
 td.sc.w2  { background: var(--w2bg); }
 td.sc.tod { background: var(--todbg); border-left: 1px solid var(--todbd); border-right: 1px solid var(--todbd); }
 td.sc.w1:last-child, td.sc.w1:nth-child(9) { border-right: 2px solid var(--border); }
-td.sc.fire-day { background: rgba(239,68,68,.06) !important; }
+/* fire-day: 별도 배경 없음 - 기존 w1/w2/tod 배경 그대로 유지 */
 
 /* ════════════════════════
    칩
@@ -529,10 +527,7 @@ td.sc.fire-day { background: rgba(239,68,68,.06) !important; }
   border-color: var(--todbd);
   border-width: 1.5px;
 }
-.day-cell.fire-cell {
-  background: rgba(239,68,68,.06);
-  border-color: rgba(239,68,68,.2);
-}
+/* fire-cell: 별도 배경 없음 - 기존 배경 그대로 유지 */
 .day-cell.fire-cell.today-cell {
   background: var(--todbg);
   border-color: var(--todbd);
