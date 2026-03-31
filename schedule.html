@@ -1906,12 +1906,24 @@ function renderLocBody(campName, isBackup) {
       if (!addr) return;
       var row = document.createElement("div");
       row.className = "loc-row";
+      row.style.cursor = "pointer";
       row.innerHTML =
         "<div class='loc-camp-name'>📦 " + name + "</div>" +
         "<div class='loc-address'>" +
           (gubun ? "<span style='font-size:10px;color:var(--text3);display:block;margin-bottom:2px'>" + gubun + "</span>" : "") +
-          addr +
+          "<span style='color:var(--accent);text-decoration:underline;text-underline-offset:2px'>" + addr + "</span>" +
+          "<span style='font-size:10px;color:var(--text3);display:block;margin-top:3px'>📍 티맵으로 열기</span>" +
         "</div>";
+      row.addEventListener("click", function() {
+        var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        if (isMobile) {
+          // 모바일: 티맵 앱 실행
+          location.href = "tmap://search?name=" + encodeURIComponent(addr);
+        } else {
+          // PC: 티맵 웹
+          window.open("https://www.tmap.co.kr/tmap2/common/search.do?searchText=" + encodeURIComponent(addr), "_blank");
+        }
+      });
       body.appendChild(row);
     });
   });
