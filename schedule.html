@@ -1877,14 +1877,13 @@ function renderLocBody(campName, isBackup) {
   // 표시할 캠프 목록 결정
   var targets = [];
   if (isBackup || !campName) {
-    // 백업/전체: CAMPS 순서 유지, 시트에 있는 것만
+    // 백업/전체: CAMPS 순서 유지
     targets = CAMPS.filter(function(c){ return CAMP_LOCATIONS[c]; });
     // CAMPS에 없는 항목도 추가
     Object.keys(CAMP_LOCATIONS).forEach(function(c){
       if (targets.indexOf(c) === -1) targets.push(c);
     });
   } else {
-    // 해당 캠프만
     if (CAMP_LOCATIONS[campName]) targets = [campName];
   }
 
@@ -1896,14 +1895,25 @@ function renderLocBody(campName, isBackup) {
   }
 
   targets.forEach(function(name) {
-    var addr = CAMP_LOCATIONS[name] || "";
-    if (!addr) return;
-    var row = document.createElement("div");
-    row.className = "loc-row";
-    row.innerHTML =
-      "<div class='loc-camp-name'>📦 " + name + "</div>" +
-      "<div class='loc-address'>" + addr + "</div>";
-    body.appendChild(row);
+    var entries = CAMP_LOCATIONS[name];
+    if (!entries) return;
+    // 배열이 아닌 경우(구버전 호환) 배열로 변환
+    if (!Array.isArray(entries)) entries = [{gubun: "", address: entries}];
+
+    entries.forEach(function(entry) {
+      var addr   = entry.address || entry || "";
+      var gubun  = entry.gubun  || "";
+      if (!addr) return;
+      var row = document.createElement("div");
+      row.className = "loc-row";
+      row.innerHTML =
+        "<div class='loc-camp-name'>📦 " + name + "</div>" +
+        "<div class='loc-address'>" +
+          (gubun ? "<span style='font-size:10px;color:var(--text3);display:block;margin-bottom:2px'>" + gubun + "</span>" : "") +
+          addr +
+        "</div>";
+      body.appendChild(row);
+    });
   });
 }
 
