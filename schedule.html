@@ -409,7 +409,6 @@ th.toh  {
   background: rgba(37,99,235,.15) !important; color: var(--accent) !important;
   border-top: 2px solid var(--accent);
 }
-/* fire-col 헤더: 별도 배경 없음 - 기존 w1h/w2h 색상 유지 */
 .dnum { display: block; font-size: 15px; font-weight: 700; font-family: "JetBrains Mono", monospace; line-height: 1; }
 .dnum-wrap { display: flex; align-items: center; justify-content: center; gap: 2px; }
 .dfire-left { font-size: 11px; line-height: 1; }
@@ -435,7 +434,6 @@ td.sc.w1  { background: var(--w1bg); }
 td.sc.w2  { background: var(--w2bg); }
 td.sc.tod { background: var(--todbg); border-left: 1px solid var(--todbd); border-right: 1px solid var(--todbd); }
 td.sc.w1:last-child, td.sc.w1:nth-child(9) { border-right: 2px solid var(--border); }
-/* fire-day: 별도 배경 없음 - 기존 w1/w2/tod 배경 그대로 유지 */
 
 /* ════════════════════════
    칩
@@ -527,7 +525,6 @@ td.sc.w1:last-child, td.sc.w1:nth-child(9) { border-right: 2px solid var(--borde
   border-color: var(--todbd);
   border-width: 1.5px;
 }
-/* fire-cell: 별도 배경 없음 - 기존 배경 그대로 유지 */
 .day-cell.fire-cell.today-cell {
   background: var(--todbg);
   border-color: var(--todbd);
@@ -996,7 +993,27 @@ var SL = {}, SF = "", SLast = "", TODAY = "";
 var winStart, noticeMsg = "";
 var WIN = [], W1 = [], W2 = [];
 var CAMPS = [], BY_CAMP = {};
-var CAMP_LOCATIONS = {}; // 캠프위치 데이터
+var CAMP_LOCATIONS = {};
+
+/* ═══════════════════════════════════════
+   ★ 허용 캠프 목록 (화이트리스트) ★
+   이 목록에 있는 캠프만 표시됩니다.
+   순서대로 카드가 나열됩니다.
+═══════════════════════════════════════ */
+var ALLOWED_CAMPS = [
+  "강서1캠프",
+  "서초1캠프",
+  "화성1캠프",
+  "수원1캠프",
+  "시흥1캠프",
+  "시흥2캠프",
+  "안양1캠프",
+  "인천7캠프",
+  "인천8캠프",
+  "일산5캠프",
+  "백업",
+  "운영자"
+];
 
 /* ═══════════════════════════════════════
    로딩 / 에러 UI
@@ -1107,17 +1124,16 @@ function buildWindow() {
 }
 
 /* ═══════════════════════════════════════
-   캠프 맵 구성
+   캠프 맵 구성 — ALLOWED_CAMPS 화이트리스트 적용
 ═══════════════════════════════════════ */
-var HIDDEN_CAMPS = ["용차", "비고1", "퇴사", "퇴사요청"];
-
 function buildCampMap() {
   CAMPS = []; BY_CAMP = {};
   DRIVERS.forEach(function(d) {
-    if (!BY_CAMP[d.camp]) { BY_CAMP[d.camp]=[]; CAMPS.push(d.camp); }
+    if (!BY_CAMP[d.camp]) { BY_CAMP[d.camp]=[]; }
     BY_CAMP[d.camp].push(d);
   });
-  CAMPS = CAMPS.filter(function(c){ return HIDDEN_CAMPS.indexOf(c) === -1; });
+  // ALLOWED_CAMPS에 있는 캠프만, 지정한 순서대로 표시
+  CAMPS = ALLOWED_CAMPS.filter(function(c) { return !!BY_CAMP[c]; });
 }
 
 /* ═══════════════════════════════════════
@@ -1819,7 +1835,6 @@ function showLocModal() {
   var body  = document.getElementById("loc-body");
   var title = document.getElementById("loc-title");
 
-  // 현재 캠프 파악
   var campName = "";
   var isBackup = false;
   if (pgCamp.classList.contains("on")) {
@@ -1827,7 +1842,6 @@ function showLocModal() {
     isBackup = (campName === "백업" || campName === "운영자");
   }
 
-  // 표시 제목 설정
   if (isBackup) {
     title.textContent = "📍 전체 캠프 위치";
   } else if (campName) {
@@ -1836,14 +1850,12 @@ function showLocModal() {
     title.textContent = "📍 전체 캠프 위치";
   }
 
-  // 로딩 표시
   body.innerHTML = "<div class='loc-loading'>⏳ 위치 정보 불러오는 중…</div>";
   modal.style.display = "flex";
 
   var btn = document.getElementById("btn-loc");
   if (btn) btn.classList.add("loading");
 
-  // 실시간 API 호출
   var xhr = new XMLHttpRequest();
   xhr.open("GET", API_URL + "?action=getCampLocations", true);
   xhr.timeout = 15000;
@@ -1869,12 +1881,9 @@ function renderLocBody(campName, isBackup) {
   var body = document.getElementById("loc-body");
   body.innerHTML = "";
 
-  // 표시할 캠프 목록 결정
   var targets = [];
   if (isBackup || !campName) {
-    // 백업/전체: CAMPS 순서 유지
     targets = CAMPS.filter(function(c){ return CAMP_LOCATIONS[c]; });
-    // CAMPS에 없는 항목도 추가
     Object.keys(CAMP_LOCATIONS).forEach(function(c){
       if (targets.indexOf(c) === -1) targets.push(c);
     });
@@ -1892,7 +1901,6 @@ function renderLocBody(campName, isBackup) {
   targets.forEach(function(name) {
     var entries = CAMP_LOCATIONS[name];
     if (!entries) return;
-    // 배열이 아닌 경우(구버전 호환) 배열로 변환
     if (!Array.isArray(entries)) entries = [{gubun: "", address: entries}];
 
     entries.forEach(function(entry) {
@@ -1912,10 +1920,8 @@ function renderLocBody(campName, isBackup) {
       row.addEventListener("click", function() {
         var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
         if (isMobile) {
-          // 모바일: 티맵 앱 실행
           location.href = "tmap://search?name=" + encodeURIComponent(addr);
         } else {
-          // PC: 티맵 웹
           window.open("https://www.tmap.co.kr/tmap2/common/search.do?searchText=" + encodeURIComponent(addr), "_blank");
         }
       });
