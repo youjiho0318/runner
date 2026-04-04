@@ -362,5 +362,251 @@
     <p>© 2026 <span>러너로지스 RunnerLogis</span>. All rights reserved.</p>
   </footer>
 
+  <!-- ════ 오늘 이슈 팝업 ════ -->
+  <div id="issue-popup" style="display:none">
+    <div class="ip-box">
+      <div class="ip-head">
+        <div class="ip-head-top">
+          <div class="ip-title">
+            <div class="ip-title-icon">📢</div>
+            오늘의 이슈
+          </div>
+          <button class="ip-close" onclick="closeIssuePopup()">✕</button>
+        </div>
+        <div class="ip-date" id="ip-date">—</div>
+      </div>
+      <div class="ip-body" id="ip-body"></div>
+      <div class="ip-foot">
+        <label class="ip-no-more">
+          <input type="checkbox" id="ip-dismiss-cb"> 오늘은 그만 보기
+        </label>
+        <div style="display:flex;gap:8px;">
+          <button class="ip-detail-btn" onclick="location.href='https://runnerweb.github.io/runner1/issue.html'">자세히 보기</button>
+          <button class="ip-confirm-btn" onclick="closeIssuePopup()">확인</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    /* ── 팝업 오버레이 ── */
+    #issue-popup {
+      position: fixed; inset: 0;
+      background: rgba(15,23,42,.5);
+      z-index: 9999;
+      display: flex; align-items: center; justify-content: center;
+      padding: 16px;
+      animation: ipBgIn .2s ease;
+    }
+    @keyframes ipBgIn { from { opacity:0; } to { opacity:1; } }
+
+    .ip-box {
+      background: #fff;
+      border: 1px solid var(--gray-200);
+      border-radius: 20px;
+      width: 100%; max-width: 460px; max-height: 82vh;
+      display: flex; flex-direction: column;
+      box-shadow: 0 24px 64px rgba(0,0,0,.18);
+      overflow: hidden;
+      animation: ipUp .28s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes ipUp { from { opacity:0; transform:translateY(20px) scale(.97); } to { opacity:1; transform:none; } }
+
+    .ip-head {
+      padding: 18px 20px 13px;
+      border-bottom: 1px solid var(--gray-200);
+      background: linear-gradient(135deg, #FFF0EB, #EBF3FE);
+      flex-shrink: 0;
+    }
+    .ip-head-top {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 5px;
+    }
+    .ip-title {
+      font-size: 15px; font-weight: 900;
+      color: var(--gray-800);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .ip-title-icon {
+      width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+      background: linear-gradient(135deg, #f59e0b, #ea580c);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px;
+    }
+    .ip-close {
+      background: var(--gray-100); border: 1px solid var(--gray-200);
+      border-radius: 7px; padding: 4px 11px;
+      font-size: 15px; cursor: pointer; color: var(--gray-600);
+      transition: all .15s;
+    }
+    .ip-close:hover { background: var(--gray-200); color: var(--gray-800); }
+    .ip-date { font-size: 11px; color: var(--gray-600); font-family: 'Montserrat', monospace; }
+
+    .ip-body { flex:1; overflow-y:auto; padding: 14px 16px; }
+
+    .ip-item {
+      display: flex; align-items: flex-start; gap: 10px;
+      background: var(--gray-100); border: 1px solid var(--gray-200);
+      border-left: 3px solid var(--accent);
+      border-radius: 10px; padding: 11px 13px;
+      margin-bottom: 8px;
+    }
+    .ip-item:last-child { margin-bottom: 0; }
+    .ip-item-badge {
+      flex-shrink: 0; padding: 2px 9px; border-radius: 7px;
+      font-size: 10px; font-weight: 700; margin-top: 2px; white-space: nowrap;
+      background: #EBF3FE; color: var(--accent);
+      border: 1px solid rgba(26,115,232,.25);
+    }
+    .ip-item-content {
+      flex: 1; font-size: 13px; color: var(--gray-800);
+      line-height: 1.7; word-break: keep-all; white-space: pre-line;
+    }
+
+    .ip-foot {
+      padding: 12px 18px 16px; border-top: 1px solid var(--gray-200);
+      display: flex; align-items: center; justify-content: space-between;
+      flex-shrink: 0; gap: 10px; flex-wrap: wrap;
+    }
+    .ip-no-more {
+      display: flex; align-items: center; gap: 7px;
+      font-size: 12px; color: var(--gray-600);
+      cursor: pointer; user-select: none;
+    }
+    .ip-no-more input { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; }
+
+    .ip-confirm-btn {
+      background: var(--accent); color: #fff; border: none;
+      border-radius: 9px; padding: 8px 20px;
+      font-size: 13px; font-weight: 700; cursor: pointer;
+      font-family: 'Noto Sans KR', sans-serif; transition: opacity .15s;
+    }
+    .ip-confirm-btn:hover { opacity: .85; }
+
+    .ip-detail-btn {
+      background: var(--gray-100); color: var(--gray-600);
+      border: 1px solid var(--gray-200);
+      border-radius: 9px; padding: 8px 16px;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      font-family: 'Noto Sans KR', sans-serif; transition: all .15s;
+    }
+    .ip-detail-btn:hover { background: var(--gray-200); color: var(--gray-800); }
+  </style>
+
+  <script>
+    /* ════════════════════════════
+       이슈 팝업 설정
+    ════════════════════════════ */
+    var ISSUE_API     = "https://script.google.com/macros/s/AKfycbz6PQIGfl2l_P7KSBKQkuPLLPoHt-tLx-ZwcPlYUxNQj39oROys5MW4tObDrNhSQhew/exec";
+    var DISMISS_KEY   = "issuePopupDismiss_v2"; // issue.html 과 동일한 키 공유
+    var KD            = ["일","월","화","수","목","금","토"];
+    var _ipTimer      = null;
+
+    /* 오늘 날짜 계산 (issue.html 과 동일 로직) */
+    function getToday() {
+      var now = new Date(); now.setDate(now.getDate() + 1);
+      return now.getFullYear() + "-" +
+        String(now.getMonth()+1).padStart(2,"0") + "-" +
+        String(now.getDate()).padStart(2,"0");
+    }
+
+    function fmtKor(s) {
+      var d = new Date(s+"T00:00:00");
+      return (d.getMonth()+1)+"월 "+d.getDate()+"일 ("+KD[d.getDay()]+")";
+    }
+
+    function escHtml(s) {
+      return String(s)
+        .replace(/&/g,"&amp;").replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    }
+
+    /* 팝업 닫기 */
+    function closeIssuePopup() {
+      var cb = document.getElementById("ip-dismiss-cb");
+      if (cb && cb.checked) {
+        try { localStorage.setItem(DISMISS_KEY, getToday()); } catch(e) {}
+      }
+      var popup = document.getElementById("issue-popup");
+      popup.style.opacity = "0";
+      popup.style.transition = "opacity .2s";
+      setTimeout(function(){ popup.style.display = "none"; }, 200);
+    }
+
+    /* 팝업 배경 클릭 시 닫기 */
+    document.getElementById("issue-popup").addEventListener("click", function(e) {
+      if (e.target === this) closeIssuePopup();
+    });
+
+    /* 팝업 표시 */
+    function showIssuePopup(issues) {
+      var today = getToday();
+      document.getElementById("ip-date").textContent = fmtKor(today);
+      document.getElementById("ip-dismiss-cb").checked = false;
+
+      var html = issues.map(function(iss) {
+        return "<div class='ip-item'>" +
+          "<span class='ip-item-badge'>" + escHtml(iss.type) + "</span>" +
+          "<div class='ip-item-content'>" + escHtml(iss.content) + "</div>" +
+        "</div>";
+      }).join("");
+
+      document.getElementById("ip-body").innerHTML = html;
+      document.getElementById("issue-popup").style.display = "flex";
+    }
+
+    /* JSONP 방식으로 이슈 API 호출 */
+    function loadTodayIssues() {
+      var today = getToday();
+
+      /* 오늘 그만 보기 체크 여부 확인 */
+      try {
+        if (localStorage.getItem(DISMISS_KEY) === today) return;
+      } catch(e) {}
+
+      if (_ipTimer) clearTimeout(_ipTimer);
+
+      var old = document.getElementById("_ip_script");
+      if (old && old.parentNode) old.parentNode.removeChild(old);
+
+      var cbName = "_ipCb";
+
+      window[cbName] = function(data) {
+        if (_ipTimer) { clearTimeout(_ipTimer); _ipTimer = null; }
+        var s = document.getElementById("_ip_script");
+        if (s && s.parentNode) s.parentNode.removeChild(s);
+        delete window[cbName];
+
+        if (data && data.ok && Array.isArray(data.issues)) {
+          var todayIssues = data.issues.filter(function(i) { return i.date === today; });
+          if (todayIssues.length > 0) showIssuePopup(todayIssues);
+        }
+      };
+
+      var script = document.createElement("script");
+      script.id  = "_ip_script";
+      script.src = ISSUE_API + "?callback=" + cbName;
+      script.onerror = function() {
+        if (_ipTimer) { clearTimeout(_ipTimer); _ipTimer = null; }
+        if (script.parentNode) script.parentNode.removeChild(script);
+        delete window[cbName];
+        // 오류 시 팝업 미표시 (조용히 실패)
+      };
+
+      _ipTimer = setTimeout(function() {
+        var s = document.getElementById("_ip_script");
+        if (s && s.parentNode) s.parentNode.removeChild(s);
+        delete window[cbName];
+      }, 20000);
+
+      document.head.appendChild(script);
+    }
+
+    /* 페이지 로드 시 실행 */
+    window.addEventListener("DOMContentLoaded", function() {
+      loadTodayIssues();
+    });
+  </script>
+
 </body>
 </html>
