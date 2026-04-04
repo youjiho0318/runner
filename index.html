@@ -12,6 +12,9 @@
       --primary-soft: #FFF0EB;
       --accent: #1A73E8;
       --accent-light: #4A9DF5;
+      --green: #16A34A;
+      --green-light: #22C55E;
+      --green-soft: #F0FDF4;
       --bg: #F8FAFF;
       --white: #FFFFFF;
       --gray-100: #F1F5F9;
@@ -26,11 +29,7 @@
       --radius-sm: 12px;
     }
 
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
       font-family: 'Noto Sans KR', sans-serif;
@@ -40,183 +39,94 @@
       overflow-x: hidden;
     }
 
-    /* ── BACKGROUND DECORATION ── */
     body::before {
       content: '';
       position: fixed;
-      top: -200px;
-      right: -200px;
-      width: 600px;
-      height: 600px;
+      top: -200px; right: -200px;
+      width: 600px; height: 600px;
       background: radial-gradient(circle, rgba(255,107,53,0.10) 0%, transparent 70%);
-      pointer-events: none;
-      z-index: 0;
+      pointer-events: none; z-index: 0;
     }
     body::after {
       content: '';
       position: fixed;
-      bottom: -150px;
-      left: -150px;
-      width: 500px;
-      height: 500px;
+      bottom: -150px; left: -150px;
+      width: 500px; height: 500px;
       background: radial-gradient(circle, rgba(26,115,232,0.08) 0%, transparent 70%);
-      pointer-events: none;
-      z-index: 0;
+      pointer-events: none; z-index: 0;
     }
 
-    /* ── HEADER / NAV ── */
+    /* ── HEADER ── */
     header {
-      position: sticky;
-      top: 0;
-      z-index: 100;
+      position: sticky; top: 0; z-index: 100;
       background: rgba(255,255,255,0.85);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--gray-200);
       padding: 0 clamp(16px, 5vw, 60px);
     }
-
     nav {
-      max-width: 1200px;
-      margin: 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      height: 70px;
-      gap: 16px;
+      max-width: 1200px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+      height: 70px; gap: 16px;
     }
-
-    .logo-wrap {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      text-decoration: none;
-    }
-
+    .logo-wrap { display: flex; align-items: center; gap: 12px; text-decoration: none; }
     .logo-icon {
-      width: 44px;
-      height: 44px;
+      width: 44px; height: 44px;
       background: linear-gradient(135deg, var(--primary), var(--primary-light));
       border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: flex; align-items: center; justify-content: center;
       box-shadow: 0 4px 14px rgba(255,107,53,0.35);
       flex-shrink: 0;
     }
+    .logo-icon svg { width: 26px; height: 26px; fill: white; }
+    .logo-text { display: flex; flex-direction: column; line-height: 1; }
+    .logo-text .ko { font-size: 18px; font-weight: 900; color: var(--gray-800); letter-spacing: -0.5px; }
+    .logo-text .en { font-family: 'Montserrat', sans-serif; font-size: 10px; font-weight: 600; color: var(--primary); letter-spacing: 2px; text-transform: uppercase; margin-top: 2px; }
+    .nav-right { display: flex; align-items: center; gap: 10px; }
+    .nav-badge { font-size: 12px; font-weight: 500; color: var(--gray-600); background: var(--gray-100); padding: 5px 12px; border-radius: 20px; white-space: nowrap; }
 
-    .logo-icon svg {
-      width: 26px;
-      height: 26px;
-      fill: white;
-    }
-
-    .logo-text {
-      display: flex;
-      flex-direction: column;
-      line-height: 1;
-    }
-
-    .logo-text .ko {
-      font-size: 18px;
-      font-weight: 900;
-      color: var(--gray-800);
-      letter-spacing: -0.5px;
-    }
-
-    .logo-text .en {
-      font-family: 'Montserrat', sans-serif;
-      font-size: 10px;
-      font-weight: 600;
-      color: var(--primary);
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      margin-top: 2px;
-    }
-
-    .nav-right {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .nav-badge {
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--gray-600);
-      background: var(--gray-100);
-      padding: 5px 12px;
-      border-radius: 20px;
-      white-space: nowrap;
-    }
-
-    /* ── HERO SECTION ── */
+    /* ── HERO ── */
     .hero {
-      position: relative;
-      z-index: 1;
-      max-width: 1200px;
-      margin: 0 auto;
+      position: relative; z-index: 1;
+      max-width: 1200px; margin: 0 auto;
       padding: clamp(40px, 8vw, 80px) clamp(16px, 5vw, 60px) 0;
       text-align: center;
     }
-
     .hero-eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: var(--primary-soft);
-      color: var(--primary);
-      font-size: 13px;
-      font-weight: 700;
-      padding: 6px 16px;
-      border-radius: 20px;
-      margin-bottom: 24px;
-      letter-spacing: 0.5px;
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--primary-soft); color: var(--primary);
+      font-size: 13px; font-weight: 700;
+      padding: 6px 16px; border-radius: 20px;
+      margin-bottom: 24px; letter-spacing: 0.5px;
       animation: fadeDown 0.6s ease both;
     }
-
     .hero-eyebrow span.dot {
-      width: 6px;
-      height: 6px;
-      background: var(--primary);
-      border-radius: 50%;
+      width: 6px; height: 6px;
+      background: var(--primary); border-radius: 50%;
       animation: pulse 2s infinite;
     }
-
     .hero-title {
-      font-family: 'Noto Sans KR', sans-serif;
-      font-size: clamp(32px, 6vw, 64px);
-      font-weight: 900;
-      line-height: 1.15;
-      color: var(--gray-800);
-      letter-spacing: -1px;
-      margin-bottom: 20px;
+      font-size: clamp(32px, 6vw, 64px); font-weight: 900;
+      line-height: 1.15; color: var(--gray-800);
+      letter-spacing: -1px; margin-bottom: 20px;
       animation: fadeDown 0.6s 0.1s ease both;
     }
-
     .hero-title .highlight {
       background: linear-gradient(135deg, var(--primary), var(--accent));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
     }
-
     .hero-subtitle {
-      font-size: clamp(15px, 2vw, 18px);
-      color: var(--gray-600);
-      font-weight: 400;
-      line-height: 1.7;
-      max-width: 560px;
-      margin: 0 auto 60px;
+      font-size: clamp(15px, 2vw, 18px); color: var(--gray-600);
+      font-weight: 400; line-height: 1.7;
+      max-width: 560px; margin: 0 auto 60px;
       animation: fadeDown 0.6s 0.2s ease both;
     }
 
-    /* ── MAIN BUTTONS ── */
+    /* ── CARDS GRID ── */
     .buttons-grid {
-      position: relative;
-      z-index: 1;
-      max-width: 1200px;
-      margin: 0 auto;
+      position: relative; z-index: 1;
+      max-width: 1200px; margin: 0 auto;
       padding: 0 clamp(16px, 5vw, 60px) clamp(60px, 10vw, 100px);
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -224,193 +134,96 @@
     }
 
     .menu-card {
-      background: var(--white);
-      border-radius: var(--radius);
+      background: var(--white); border-radius: var(--radius);
       padding: clamp(28px, 4vw, 44px);
       box-shadow: var(--shadow-md);
       border: 1.5px solid var(--gray-200);
-      cursor: pointer;
-      text-decoration: none;
-      color: inherit;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
+      cursor: pointer; text-decoration: none; color: inherit;
+      display: flex; flex-direction: column; gap: 20px;
       transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
       animation: fadeUp 0.6s ease both;
-      position: relative;
-      overflow: hidden;
+      position: relative; overflow: hidden;
     }
-
     .menu-card::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-      border-radius: inherit;
+      content: ''; position: absolute; inset: 0;
+      opacity: 0; transition: opacity 0.3s ease; border-radius: inherit;
     }
-
-    .menu-card:hover {
-      transform: translateY(-6px);
-      box-shadow: var(--shadow-lg);
-    }
-
+    .menu-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-lg); }
     .menu-card:hover::before { opacity: 1; }
     .menu-card:active { transform: translateY(-2px); }
 
-    /* Card 1 — Dashboard */
-    .card-dashboard {
-      animation-delay: 0.1s;
-    }
-    .card-dashboard::before {
-      background: linear-gradient(135deg, rgba(255,107,53,0.04), rgba(255,107,53,0.01));
-    }
+    /* 대시보드 */
+    .card-dashboard { animation-delay: 0.1s; }
+    .card-dashboard::before { background: linear-gradient(135deg, rgba(255,107,53,0.04), rgba(255,107,53,0.01)); }
     .card-dashboard:hover { border-color: rgba(255,107,53,0.4); }
 
-    /* Card 2 — Schedule */
-    .card-schedule {
-      animation-delay: 0.2s;
-    }
-    .card-schedule::before {
-      background: linear-gradient(135deg, rgba(26,115,232,0.04), rgba(26,115,232,0.01));
-    }
+    /* 스케줄 */
+    .card-schedule { animation-delay: 0.2s; }
+    .card-schedule::before { background: linear-gradient(135deg, rgba(26,115,232,0.04), rgba(26,115,232,0.01)); }
     .card-schedule:hover { border-color: rgba(26,115,232,0.4); }
 
-    .card-icon-wrap {
-      width: 64px;
-      height: 64px;
-      border-radius: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
+    /* 이슈관리 */
+    .card-issue { animation-delay: 0.3s; }
+    .card-issue::before { background: linear-gradient(135deg, rgba(22,163,74,0.04), rgba(22,163,74,0.01)); }
+    .card-issue:hover { border-color: rgba(22,163,74,0.4); }
 
+    .card-icon-wrap {
+      width: 64px; height: 64px; border-radius: 18px;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
     .icon-orange { background: linear-gradient(135deg, var(--primary), var(--primary-light)); box-shadow: 0 6px 20px rgba(255,107,53,0.30); }
     .icon-blue   { background: linear-gradient(135deg, var(--accent), var(--accent-light));   box-shadow: 0 6px 20px rgba(26,115,232,0.25); }
-
-    .card-icon-wrap svg {
-      width: 30px;
-      height: 30px;
-      fill: white;
-    }
+    .icon-green  { background: linear-gradient(135deg, var(--green), var(--green-light));     box-shadow: 0 6px 20px rgba(22,163,74,0.28); }
+    .card-icon-wrap svg { width: 30px; height: 30px; fill: white; }
 
     .card-body { flex: 1; }
+    .card-title { font-size: clamp(20px, 2.5vw, 24px); font-weight: 800; color: var(--gray-800); margin-bottom: 8px; letter-spacing: -0.5px; }
+    .card-desc  { font-size: 14px; color: var(--gray-600); line-height: 1.65; font-weight: 400; }
 
-    .card-title {
-      font-size: clamp(20px, 2.5vw, 24px);
-      font-weight: 800;
-      color: var(--gray-800);
-      margin-bottom: 8px;
-      letter-spacing: -0.5px;
-    }
-
-    .card-desc {
-      font-size: 14px;
-      color: var(--gray-600);
-      line-height: 1.65;
-      font-weight: 400;
-    }
-
-    .card-tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 16px;
-    }
-
-    .tag {
-      font-size: 11px;
-      font-weight: 600;
-      padding: 4px 10px;
-      border-radius: 8px;
-      letter-spacing: 0.3px;
-    }
-
+    .card-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+    .tag { font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 8px; letter-spacing: 0.3px; }
     .tag-orange { background: var(--primary-soft); color: var(--primary); }
     .tag-blue   { background: #EBF3FE; color: var(--accent); }
+    .tag-green  { background: var(--green-soft); color: var(--green); }
     .tag-gray   { background: var(--gray-100); color: var(--gray-600); }
 
-    .card-arrow {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-top: 8px;
-    }
-
+    .card-arrow { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
     .arrow-btn {
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
-      border: none;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      width: 44px; height: 44px; border-radius: 12px;
+      border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
       transition: transform 0.2s ease;
     }
-
     .arrow-btn-orange { background: var(--primary-soft); color: var(--primary); }
     .arrow-btn-blue   { background: #EBF3FE; color: var(--accent); }
-
+    .arrow-btn-green  { background: var(--green-soft); color: var(--green); }
     .menu-card:hover .arrow-btn { transform: translateX(4px); }
+    .arrow-btn svg { width: 18px; height: 18px; }
 
-    .arrow-btn svg {
-      width: 18px;
-      height: 18px;
-    }
-
-    .card-status {
-      font-size: 12px;
-      font-weight: 600;
-    }
-    .status-online { color: #22C55E; display: flex; align-items: center; gap: 5px; }
-    .status-dot { width: 7px; height: 7px; background: #22C55E; border-radius: 50%; animation: pulse 2s infinite; }
+    .status-online { color: var(--green-light); display: flex; align-items: center; gap: 5px; }
+    .status-dot { width: 7px; height: 7px; background: var(--green-light); border-radius: 50%; animation: pulse 2s infinite; }
 
     /* ── FOOTER ── */
     footer {
-      position: relative;
-      z-index: 1;
+      position: relative; z-index: 1;
       text-align: center;
       padding: 28px clamp(16px, 5vw, 60px);
       border-top: 1px solid var(--gray-200);
       background: var(--white);
     }
-
-    footer p {
-      font-size: 13px;
-      color: var(--gray-400);
-      font-weight: 400;
-    }
-
-    footer span {
-      color: var(--primary);
-      font-weight: 700;
-    }
+    footer p { font-size: 13px; color: var(--gray-400); font-weight: 400; }
+    footer span { color: var(--primary); font-weight: 700; }
 
     /* ── ANIMATIONS ── */
-    @keyframes fadeDown {
-      from { opacity: 0; transform: translateY(-16px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(24px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50%       { opacity: 0.6; transform: scale(1.25); }
-    }
+    @keyframes fadeDown { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeUp   { from { opacity: 0; transform: translateY(24px);  } to { opacity: 1; transform: translateY(0); } }
+    @keyframes pulse    { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.25); } }
 
-    /* ── RESPONSIVE ── */
     @media (max-width: 640px) {
       .nav-badge { display: none; }
       .buttons-grid { grid-template-columns: 1fr; }
     }
-
-    @media (max-width: 480px) {
-      .logo-text .ko { font-size: 16px; }
-    }
+    @media (max-width: 480px) { .logo-text .ko { font-size: 16px; } }
   </style>
 </head>
 <body>
@@ -420,7 +233,6 @@
     <nav>
       <a class="logo-wrap" href="#">
         <div class="logo-icon">
-          <!-- truck icon -->
           <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9l1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
           </svg>
@@ -452,31 +264,25 @@
     </p>
   </section>
 
-  <!-- MAIN BUTTONS -->
+  <!-- CARDS -->
   <div class="buttons-grid">
 
     <!-- 대시보드 -->
     <a class="menu-card card-dashboard" href="dashboard.html">
       <div class="card-icon-wrap icon-orange">
-        <!-- dashboard icon -->
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
           <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
         </svg>
       </div>
-
       <div class="card-body">
         <div class="card-title">대시보드</div>
-        <div class="card-desc">
-          배송 현황, 처리 건수, 매출 통계 등 핵심 운영 지표를
-          한눈에 파악하세요.
-        </div>
+        <div class="card-desc">배송 현황, 처리 건수, 매출 통계 등 핵심 운영 지표를 한눈에 파악하세요.</div>
         <div class="card-tags">
           <span class="tag tag-orange">실시간 현황</span>
           <span class="tag tag-gray">통계 분석</span>
           <span class="tag tag-gray">매출 관리</span>
         </div>
       </div>
-
       <div class="card-arrow">
         <div class="status-online">
           <span class="status-dot"></span>
@@ -493,31 +299,55 @@
     <!-- 배송기사 스케줄 -->
     <a class="menu-card card-schedule" href="schedule.html">
       <div class="card-icon-wrap icon-blue">
-        <!-- calendar/person icon -->
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
           <path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/>
         </svg>
       </div>
-
       <div class="card-body">
         <div class="card-title">배송기사 스케줄</div>
-        <div class="card-desc">
-          기사별 배송 일정, 담당 구역, 근무 현황을 효율적으로
-          배정하고 관리하세요.
-        </div>
+        <div class="card-desc">기사별 배송 일정, 담당 구역, 근무 현황을 효율적으로 배정하고 관리하세요.</div>
         <div class="card-tags">
           <span class="tag tag-blue">스케줄 관리</span>
           <span class="tag tag-gray">구역 배정</span>
           <span class="tag tag-gray">근무 현황</span>
         </div>
       </div>
-
       <div class="card-arrow">
         <div class="status-online">
           <span class="status-dot"></span>
           <span style="font-size:12px;font-weight:600;color:#22C55E;">라이브</span>
         </div>
         <button class="arrow-btn arrow-btn-blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+      </div>
+    </a>
+
+    <!-- 이슈관리 -->
+    <a class="menu-card card-issue" href="https://runnerweb.github.io/runner1/issue.html">
+      <div class="card-icon-wrap icon-green">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 9h-2V5h2v6zm0 4h-2v-2h2v2z"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="card-title">이슈관리</div>
+        <div class="card-desc">날짜별 운영 이슈를 한눈에 확인하세요. 오늘의 주요 사항을 놓치지 않도록 팝업으로 알려드립니다.</div>
+        <div class="card-tags">
+          <span class="tag tag-green">비고1</span>
+          <span class="tag tag-green">비고2</span>
+          <span class="tag tag-green">비고3</span>
+          <span class="tag tag-gray">날짜별 조회</span>
+        </div>
+      </div>
+      <div class="card-arrow">
+        <div class="status-online">
+          <span class="status-dot"></span>
+          <span style="font-size:12px;font-weight:600;color:#22C55E;">라이브</span>
+        </div>
+        <button class="arrow-btn arrow-btn-green">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M5 12h14M12 5l7 7-7 7"/>
           </svg>
