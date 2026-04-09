@@ -343,6 +343,7 @@ body.camp-only .back-btn { display: none; }
   font-size: 12px; color: var(--text2); line-height: 1.5;
   flex: 1; word-break: keep-all;
 }
+
 .loc-empty {
   text-align: center; padding: 36px 20px;
   font-size: 13px; color: var(--text3); line-height: 1.8;
@@ -795,6 +796,7 @@ td.sc.w1:last-child, td.sc.w1:nth-child(9) { border-right: 2px solid var(--borde
   padding: 3px 12px; font-size: 11px; cursor: pointer;
   margin-left: 12px;
 }
+
 </style>
 </head>
 <body>
@@ -850,6 +852,7 @@ td.sc.w1:last-child, td.sc.w1:nth-child(9) { border-right: 2px solid var(--borde
     <button class="loc-btn" id="btn-loc" onclick="showLocModal()">📍 캠프 위치</button>
   </div>
 
+  <!-- 데스크톱: 1주차 -->
   <div class="week-label">
     <span class="wk-badge w1" id="wl1-badge">🟠 1주차</span>
     <span class="wk-range" id="wl1-range">—</span>
@@ -863,6 +866,7 @@ td.sc.w1:last-child, td.sc.w1:nth-child(9) { border-right: 2px solid var(--borde
     </div>
   </div>
 
+  <!-- 데스크톱: 2주차 -->
   <div class="week-label">
     <span class="wk-badge w2" id="wl2-badge">🔵 2주차</span>
     <span class="wk-range" id="wl2-range">—</span>
@@ -876,6 +880,7 @@ td.sc.w1:last-child, td.sc.w1:nth-child(9) { border-right: 2px solid var(--borde
     </div>
   </div>
 
+  <!-- 모바일: 카드 리스트 -->
   <div class="mobile-list" id="mobile-list"></div>
 </div>
 
@@ -934,7 +939,7 @@ td.sc.w1:last-child, td.sc.w1:nth-child(9) { border-right: 2px solid var(--borde
 <script>
 
 /* ═══════════════════════════════════════
-   ★ API URL — 새 배포 URL 적용
+   API 설정
 ═══════════════════════════════════════ */
 var API_URL = "https://script.google.com/macros/s/AKfycbyGjuEVD-6oWjLBywITh-5PBzlO1QyQPSs78Dyy2GJFaiOpblhRUD1rB-gA0CbRD6jD/exec";
 
@@ -991,12 +996,23 @@ var CAMPS = [], BY_CAMP = {};
 var CAMP_LOCATIONS = {};
 
 /* ═══════════════════════════════════════
-   ★ 허용 캠프 목록
+   ★ 허용 캠프 목록 (화이트리스트) ★
+   이 목록에 있는 캠프만 표시됩니다.
+   순서대로 카드가 나열됩니다.
 ═══════════════════════════════════════ */
 var ALLOWED_CAMPS = [
-  "강서1캠프","서초1캠프","화성1캠프","수원1캠프","시흥1캠프",
-  "시흥2캠프","안양1캠프","인천7캠프","인천8캠프","일산5캠프",
-  "백업","운영자"
+  "강서1캠프",
+  "서초1캠프",
+  "화성1캠프",
+  "수원1캠프",
+  "시흥1캠프",
+  "시흥2캠프",
+  "안양1캠프",
+  "인천7캠프",
+  "인천8캠프",
+  "일산5캠프",
+  "백업",
+  "운영자"
 ];
 
 /* ═══════════════════════════════════════
@@ -1084,8 +1100,8 @@ function showFatalError(msg) {
 function buildWindow() {
   SL = {};
   SHEET_DATES.forEach(function(s){ SL[s.date]=s.raw; });
-  SF    = SHEET_DATES[0] ? SHEET_DATES[0].date : "";
-  SLast = SHEET_DATES.length ? SHEET_DATES[SHEET_DATES.length-1].date : "";
+  SF    = SHEET_DATES[0].date;
+  SLast = SHEET_DATES[SHEET_DATES.length-1].date;
   var _now = new Date(); _now.setDate(_now.getDate()+1);
   TODAY = toDS(_now);
 
@@ -1093,6 +1109,7 @@ function buildWindow() {
   var dow0 = todayDate.getDay();
   var thisSunday = toDS(new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate() - dow0));
 
+  noticeMsg = "";
   winStart = thisSunday;
 
   WIN = [];
@@ -1107,7 +1124,7 @@ function buildWindow() {
 }
 
 /* ═══════════════════════════════════════
-   캠프 맵 구성
+   캠프 맵 구성 — ALLOWED_CAMPS 화이트리스트 적용
 ═══════════════════════════════════════ */
 function hasAnySchedule(d) {
   if (!d.schedule) return false;
@@ -1119,23 +1136,32 @@ function hasAnySchedule(d) {
 
 function buildCampMap() {
   CAMPS = []; BY_CAMP = {};
+
+  // 1단계: 캠프별로 전체 기사 수집
   var rawByCamp = {};
   DRIVERS.forEach(function(d) {
     if (!rawByCamp[d.camp]) rawByCamp[d.camp] = [];
     rawByCamp[d.camp].push(d);
   });
+
+  // 2단계: 이름 기준 중복 제거 — 스케줄 있는 행 우선, 없으면 첫 번째 행 유지
   Object.keys(rawByCamp).forEach(function(camp) {
     var seen = {};
     rawByCamp[camp].forEach(function(d) {
-      var key = d.name + "||" + d.id;
+      var key = d.name; // 이름만으로 중복 판별
       if (!seen[key]) {
         seen[key] = d;
       } else {
-        if (hasAnySchedule(d) && !hasAnySchedule(seen[key])) seen[key] = d;
+        // 현재 행에 스케줄이 있고, 기존 행에 스케줄이 없으면 교체
+        if (hasAnySchedule(d) && !hasAnySchedule(seen[key])) {
+          seen[key] = d;
+        }
       }
     });
     BY_CAMP[camp] = Object.keys(seen).map(function(k) { return seen[k]; });
   });
+
+  // 3단계: ALLOWED_CAMPS에 있는 캠프만, 지정한 순서대로 표시
   CAMPS = ALLOWED_CAMPS.filter(function(c) { return !!BY_CAMP[c]; });
 }
 
@@ -1180,12 +1206,13 @@ loadFromAPI();
 var pgIndex = document.getElementById("pg-index");
 var pgCamp  = document.getElementById("pg-camp");
 
+/* ── INDEX ── */
 function showIndex() {
   pgCamp.classList.remove("on");
   pgIndex.classList.add("on");
   document.title = "배송기사 스케줄";
   document.getElementById("idx-range").textContent =
-    WIN.length ? fmtFull(WIN[0].ds)+" ~ "+fmtFull(WIN[13].ds) : "—";
+    fmtFull(WIN[0].ds)+" ~ "+fmtFull(WIN[13].ds);
 
   var grid = document.getElementById("idx-grid");
   grid.innerHTML = "";
@@ -1202,7 +1229,8 @@ function showIndex() {
     card.className = "camp-card" + (isBackup ? " backup-card" : "");
 
     var hiddenBadge = hiddenCnt > 0
-      ? "<span class='hidden-badge'>🙈 "+hiddenCnt+"명 숨김</span>" : "";
+      ? "<span class='hidden-badge'>🙈 "+hiddenCnt+"명 숨김</span>"
+      : "";
 
     var statsHtml =
       "<div class=\"card-stats\">"+
@@ -1232,10 +1260,11 @@ function showIndex() {
     }
 
     card.innerHTML =
-      "<div class=\"card-name\"><span class=\"card-dot\"></span>"+(isBackup?"🔄 "+camp:camp)+hiddenBadge+"</div>"+
-      statsHtml+dispatchHtml+
+      "<div class=\"card-name\"><span class=\"card-dot\"></span>"+(isBackup ? "🔄 "+camp : camp)+hiddenBadge+"</div>"+
+      statsHtml+
+      dispatchHtml+
       "<button class=\"copy-link-btn\" data-link=\""+campLink+"\" onclick=\"event.stopPropagation();copyLink(this)\">🔗 링크복사</button>"+
-      (isBackup?"":"<span class=\"card-arrow\">→</span>");
+      (isBackup ? "" : "<span class=\"card-arrow\">→</span>");
 
     (function(c){ card.addEventListener("click", function(e){
       if (!e.target.closest(".copy-link-btn")) showCamp(c);
@@ -1244,10 +1273,12 @@ function showIndex() {
   });
 }
 
-/* ── 테이블 헤더/바디 ── */
+/* ── 데스크톱 테이블 헤더 ── */
 var COL_N = 120, COL_R = 82, COL_D = 90;
 function buildColgroup(cols) {
-  var c = "<colgroup><col style=\"width:"+COL_N+"px\"><col style=\"width:"+COL_R+"px\">";
+  var c = "<colgroup>"+
+    "<col style=\"width:"+COL_N+"px\">"+
+    "<col style=\"width:"+COL_R+"px\">";
   for (var i=0;i<cols;i++) c+="<col style=\"width:"+COL_D+"px\">";
   return c+"</colgroup>";
 }
@@ -1255,20 +1286,25 @@ function buildColgroup(cols) {
 function buildWHead(days, wCls, label) {
   label = label || "";
   var h = buildColgroup(days.length)+
-    "<tr><th style=\"width:"+COL_N+"px\">이름</th><th style=\"width:"+COL_R+"px\">라우트</th>"+
+    "<tr>"+
+    "<th style=\"width:"+COL_N+"px\">이름</th>"+
+    "<th style=\"width:"+COL_R+"px\">라우트</th>"+
     "<th colspan=\""+days.length+"\" class=\""+wCls+"\" style=\"text-align:center\">"+label+"</th>"+
     "</tr><tr><th></th><th></th>";
   days.forEach(function(wd) {
     var cls = wd.isToday ? "toh" : wCls;
     var dc  = wd.dow===0 ? "sun" : wd.dow===6 ? "sat" : "wdy";
     var fire = isFire(wd.ds);
+    var fireCls = fire ? " fire-col" : "";
     var dayNum = parseInt(wd.ds.split("-")[2], 10);
-    h += "<th class=\"dcol "+cls+(fire?" fire-col":"")+"\">"+
-      "<span class=\"dnum-wrap\">"+(fire?"<span class=\"dfire-left\">🔥</span>":"")+
-      "<span class=\"dnum\">"+dayNum+"</span></span>"+
+    h += "<th class=\"dcol "+cls+fireCls+"\">"+
+      "<span class=\"dnum-wrap\">"+
+        (fire ? "<span class=\"dfire-left\">🔥</span>" : "")+
+        "<span class=\"dnum\">"+dayNum+"</span>"+
+      "</span>"+
       "<span class=\"dday "+dc+"\">"+wd.dn+"</span>"+
-      (wd.peak?"<span class=\"dpk\">PEAK</span>":"")+
-      (wd.isToday?"<span class=\"dtd\">PDD</span>":"")+
+      (wd.peak ? "<span class=\"dpk\">PEAK</span>" : "")+
+      (wd.isToday ? "<span class=\"dtd\">PDD</span>" : "")+
     "</th>";
   });
   return h+"</tr>";
@@ -1281,7 +1317,7 @@ function buildWRows(drivers, days, wCls) {
     h += "<td class=\"nc\">"+d.name+"<div class=\"sub\">"+d.id+"</div></td>";
     h += "<td class=\"rc\">"+d.route+"</td>";
     days.forEach(function(wd) {
-      var tc = "sc "+(wd.isToday?"tod":wCls==="w1h"?"w1":"w2");
+      var tc = "sc "+(wd.isToday ? "tod" : wCls==="w1h" ? "w1" : "w2");
       if (isFire(wd.ds)) tc += " fire-day";
       var v  = (d.schedule&&d.schedule[wd.ds])||"";
       var c  = wd.inSheet ? mkChip(v) : "<span class=\"chip cn\">·</span>";
@@ -1292,6 +1328,7 @@ function buildWRows(drivers, days, wCls) {
   return h || "<tr class=\"empty-r\"><td colspan=\""+(2+days.length)+"\">—</td></tr>";
 }
 
+/* ── 모바일 카드 ── */
 function buildMobileCards(drivers, useGreen, w1, w2) {
   w1 = w1 || W1; w2 = w2 || W2;
   var html = "";
@@ -1304,16 +1341,20 @@ function buildMobileCards(drivers, useGreen, w1, w2) {
       days.forEach(function(wd) {
         var v   = (d.schedule&&d.schedule[wd.ds])||"";
         var c   = wd.inSheet ? mkChip(v, useGreen) : "<span class=\"chip cn\">·</span>";
-        var dc  = wd.dow===0?"sun":wd.dow===6?"sat":"wdy";
-        var tod = wd.isToday?" today-cell":"";
+        var dc  = wd.dow===0 ? "sun" : wd.dow===6 ? "sat" : "wdy";
+        var tod = wd.isToday ? " today-cell" : "";
         var fire = isFire(wd.ds);
+        var fireCls = fire ? " fire-cell" : "";
         var dayNum = parseInt(wd.ds.split("-")[2], 10);
-        g += "<div class=\"day-cell"+tod+(fire?" fire-cell":"")+"\">"+
-          "<span class=\"dc-dnum-wrap\">"+(fire?"<span class=\"dc-fire-left\">🔥</span>":"")+
-          "<span class=\"dc-dnum "+dc+"\">"+dayNum+"</span></span>"+
+        g += "<div class=\"day-cell"+tod+fireCls+"\">"+
+          "<span class=\"dc-dnum-wrap\">"+
+            (fire ? "<span class=\"dc-fire-left\">🔥</span>" : "")+
+            "<span class=\"dc-dnum "+dc+"\">"+dayNum+"</span>"+
+          "</span>"+
           "<span class=\"dc-dday "+dc+"\">"+wd.dn+"</span>"+
-          (wd.isToday?"<span class=\"dc-today-badge\">PDD</span>":"")+
-          "<span class=\"dc-chip\">"+c+"</span></div>";
+          (wd.isToday ? "<span class=\"dc-today-badge\">PDD</span>" : "")+
+          "<span class=\"dc-chip\">"+c+"</span>"+
+          "</div>";
       });
       return g+"</div>";
     }
@@ -1322,21 +1363,25 @@ function buildMobileCards(drivers, useGreen, w1, w2) {
       "<div class=\"driver-card\" data-n=\""+d.name.toLowerCase()+"\" data-i=\""+d.id.toLowerCase()+"\">"+
         "<div class=\"dc-head\">"+
           "<div class=\"dc-avatar\">"+getInitial(d.name)+"</div>"+
-          "<div class=\"dc-info\"><div class=\"dc-name\">"+d.name+"</div><div class=\"dc-sub\">"+d.id+"</div></div>"+
+          "<div class=\"dc-info\">"+
+            "<div class=\"dc-name\">"+d.name+"</div>"+
+            "<div class=\"dc-sub\">"+d.id+"</div>"+
+          "</div>"+
           "<div class=\"dc-route\">"+d.route+"</div>"+
           "<div class=\"dc-today\">"+todayChip+"</div>"+
           "<span class=\"dc-chevron\">▾</span>"+
         "</div>"+
         "<div class=\"dc-body\">"+
-          "<div class=\"week-grid-label wgl-w1\">🟠 1주차 "+fmt(w1[0].ds)+"~"+fmt(w1[6].ds)+"</div>"+
+          "<div class=\"week-grid-label wgl-w1\">🟠 1주차 "+fmt(w1[0].ds)+"~"+fmt(w1[6].ds)+"</div><div style=\"font-size:10px;color:#ea580c;font-weight:600;margin-bottom:6px\">※ 스케줄 변경 불가</div>"+
           makeDayGrid(w1)+
-          (w2.length?"<div class=\"week-grid-label wgl-w2\">🔵 2주차 "+fmt(w2[0].ds)+"~"+fmt(w2[w2.length-1].ds)+"</div>"+makeDayGrid(w2):"")+
+          (w2.length ? "<div class=\"week-grid-label wgl-w2\">🔵 2주차 "+fmt(w2[0].ds)+"~"+fmt(w2[w2.length-1].ds)+"</div><div style=\"font-size:10px;color:#dc2626;font-weight:600;margin-bottom:6px\">※ 스케줄 변경이 있을 수 있습니다.</div>"+makeDayGrid(w2) : "")+
         "</div>"+
       "</div>";
   });
   return html;
 }
 
+/* ── CAMP PAGE ── */
 function showCamp(camp) {
   var allDrivers = BY_CAMP[camp];
   if (!allDrivers) { showIndex(); return; }
@@ -1345,6 +1390,7 @@ function showCamp(camp) {
   pgIndex.classList.remove("on");
   pgCamp.classList.add("on");
   document.title = camp+" 스케줄";
+
   document.getElementById("cp-title").textContent = camp;
 
   var nb = document.getElementById("cp-notice");
@@ -1359,34 +1405,42 @@ function showCamp(camp) {
     "<span class=\"tchip wk\">출근 "+wc+"명</span>"+
     "<span class=\"tchip of\">휴무 "+oc+"명</span>";
 
-  var rDate = new Date(TODAY+"T00:00:00");
-  var sun0  = toDS(new Date(rDate.getFullYear(), rDate.getMonth(), rDate.getDate()-rDate.getDay()));
-  var dispW1=[], dispW2=[];
-  for (var wi=0; wi<14; wi++) {
+  var rDate = new Date(TODAY + "T00:00:00");
+  var sun0  = toDS(new Date(rDate.getFullYear(), rDate.getMonth(), rDate.getDate() - rDate.getDay()));
+
+  var dispW1 = [], dispW2 = [];
+  for (var wi = 0; wi < 14; wi++) {
     var ds = addD(sun0, wi);
-    var dw = new Date(ds+"T00:00:00").getDay();
-    var obj = {ds:ds, dow:dw, dn:KD[dw], peak:false, inSheet:true, isToday:ds===TODAY};
-    if (wi<7) dispW1.push(obj); else dispW2.push(obj);
+    var dw = new Date(ds + "T00:00:00").getDay();
+    var obj = { ds: ds, dow: dw, dn: KD[dw],
+                peak: false, inSheet: true, isToday: ds === TODAY };
+    if (wi < 7) dispW1.push(obj); else dispW2.push(obj);
   }
 
-  document.getElementById("wl1-range").textContent = fmt(dispW1[0].ds)+" ~ "+fmt(dispW1[6].ds);
-  document.getElementById("wl2-range").textContent = dispW2.length?fmt(dispW2[0].ds)+" ~ "+fmt(dispW2[6].ds):"";
+  document.getElementById("wl1-range").textContent = fmt(dispW1[0].ds)+" ~ "+fmt(dispW1[dispW1.length-1].ds);
+  document.getElementById("wl2-range").textContent = dispW2.length ? fmt(dispW2[0].ds)+" ~ "+fmt(dispW2[dispW2.length-1].ds) : "";
 
-  var useGreen = (camp==="백업"||camp==="운영자");
-  document.getElementById("cp-thead-w1").innerHTML = buildWHead(dispW1,"w1h","🟠 1주차");
-  document.getElementById("cp-tbody-w1").innerHTML = buildWRows(drivers,dispW1,"w1h");
-  document.getElementById("cp-thead-w2").innerHTML = buildWHead(dispW2,"w2h","🔵 2주차");
-  document.getElementById("cp-tbody-w2").innerHTML = buildWRows(drivers,dispW2,"w2h");
-  document.getElementById("mobile-list").innerHTML = buildMobileCards(drivers,useGreen,dispW1,dispW2);
+  var useGreen = (camp === "백업" || camp === "운영자");
+  document.getElementById("cp-thead-w1").innerHTML = buildWHead(dispW1,"w1h","🟠 1주차 &nbsp;|&nbsp; <span style='font-size:10px;opacity:.7;font-weight:500'>스케줄 변경 불가</span>");
+  document.getElementById("cp-tbody-w1").innerHTML = buildWRows(drivers,dispW1,"w1h",useGreen);
+  document.getElementById("cp-thead-w2").innerHTML = buildWHead(dispW2,"w2h","🔵 2주차 &nbsp;<span style='font-size:10px;color:#dc2626;font-weight:600'>※ 스케줄 변경이 있을 수 있습니다.</span>");
+  document.getElementById("cp-tbody-w2").innerHTML = buildWRows(drivers,dispW2,"w2h",useGreen);
+
+  document.getElementById("mobile-list").innerHTML = buildMobileCards(drivers, useGreen, dispW1, dispW2);
 
   document.querySelectorAll(".dc-head").forEach(function(head) {
-    head.addEventListener("click", function() { head.parentElement.classList.toggle("collapsed"); });
+    head.addEventListener("click", function() {
+      head.parentElement.classList.toggle("collapsed");
+    });
   });
 
   document.getElementById("cp-search").value = "";
   setCount(drivers.length);
+
   window.scrollTo(0,0);
-  requestAnimationFrame(fixStickyHeads);
+  requestAnimationFrame(function() {
+    fixStickyHeads();
+  });
 }
 
 function fixStickyHeads() {
@@ -1394,62 +1448,76 @@ function fixStickyHeads() {
   if (!tb) return;
   var tbH = tb.offsetHeight;
   var legend = document.querySelector(".legend");
-  var lgH = legend?legend.getBoundingClientRect().height+16:0;
-  var wl = document.querySelector(".week-label");
-  var wlH = wl?wl.getBoundingClientRect().height+14:0;
+  var lgH = legend ? legend.getBoundingClientRect().height + 16 : 0;
+  var wl   = document.querySelector(".week-label");
+  var wlH  = wl ? wl.getBoundingClientRect().height + 14 : 0;
   var notice = document.getElementById("cp-notice");
-  var ntH = (notice&&notice.style.display!=="none")?notice.offsetHeight+8:0;
-  var maxH = Math.floor(window.innerHeight-tbH-lgH-wlH-ntH-24);
-  if (maxH<200) maxH=400;
-  document.querySelectorAll(".tbl-scroll").forEach(function(el){ el.style.maxHeight=maxH+"px"; });
+  var ntH  = (notice && notice.style.display !== "none") ? notice.offsetHeight + 8 : 0;
+  var maxH = Math.floor(window.innerHeight - tbH - lgH - wlH - ntH - 24);
+  if (maxH < 200) maxH = 400;
+
+  document.querySelectorAll(".tbl-scroll").forEach(function(el) {
+    el.style.maxHeight = maxH + "px";
+  });
 }
 
 function doSearch() {
   var q = document.getElementById("cp-search").value.toLowerCase().trim();
+  var vis = 0;
   document.querySelectorAll("#cp-tbody-w1 tr[data-n], #cp-tbody-w2 tr[data-n]").forEach(function(tr) {
     var show = !q||tr.dataset.n.indexOf(q)>-1||tr.dataset.i.indexOf(q)>-1;
     tr.classList.toggle("hid",!show);
+    if (show) vis++;
   });
   document.querySelectorAll(".driver-card[data-n]").forEach(function(card) {
     var show = !q||card.dataset.n.indexOf(q)>-1||card.dataset.i.indexOf(q)>-1;
     card.classList.toggle("hid",!show);
   });
-  var vis = document.querySelectorAll("#cp-tbody-w1 tr[data-n]:not(.hid)").length;
-  setCount(vis);
+  var visDesktop = document.querySelectorAll("#cp-tbody-w1 tr[data-n]:not(.hid)").length;
+  setCount(visDesktop||vis);
 }
 
-function setCount(n) { document.getElementById("cp-count").textContent = n+"명 표시"; }
+function setCount(n) {
+  document.getElementById("cp-count").textContent = n+"명 표시";
+}
 
 function copyLink(btn) {
   var link = btn.getAttribute("data-link");
-  if (navigator.clipboard&&navigator.clipboard.writeText) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(link).then(function() {
-      var orig=btn.textContent; btn.textContent="✅ 복사됨!";
-      setTimeout(function(){ btn.textContent=orig; }, 1500);
+      var orig = btn.textContent;
+      btn.textContent = "✅ 복사됨!";
+      setTimeout(function(){ btn.textContent = orig; }, 1500);
     });
   } else {
-    var ta=document.createElement("textarea"); ta.value=link;
-    ta.style.position="fixed"; ta.style.opacity="0";
-    document.body.appendChild(ta); ta.select(); document.execCommand("copy");
+    var ta = document.createElement("textarea");
+    ta.value = link; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    document.execCommand("copy");
     document.body.removeChild(ta);
-    var orig=btn.textContent; btn.textContent="✅ 복사됨!";
-    setTimeout(function(){ btn.textContent=orig; }, 1500);
+    var orig = btn.textContent;
+    btn.textContent = "✅ 복사됨!";
+    setTimeout(function(){ btn.textContent = orig; }, 1500);
   }
 }
 
-document.getElementById("btn-back").addEventListener("click", function(){ showIndex(); });
-document.getElementById("cp-search").addEventListener("input", function(){ doSearch(); });
-window.addEventListener("resize", function(){ if(pgCamp.classList.contains("on")) fixStickyHeads(); });
+/* ── EVENTS ── */
+document.getElementById("btn-back").addEventListener("click", function() { showIndex(); });
+document.getElementById("cp-search").addEventListener("input", function() { doSearch(); });
+window.addEventListener("resize", function() {
+  if (pgCamp.classList.contains("on")) fixStickyHeads();
+});
 
+/* ── HASH ROUTING ── */
 function getHashCamp() {
-  var h=location.hash;
-  if(!h||h==="#") return null;
+  var h = location.hash;
+  if (!h || h === "#") return null;
   return decodeURIComponent(h.slice(1));
 }
 
 function init() {
   var campFromHash = getHashCamp();
-  if (campFromHash&&BY_CAMP[campFromHash]) {
+  if (campFromHash && BY_CAMP[campFromHash]) {
     document.body.classList.add("camp-only");
     showCamp(campFromHash);
   } else {
@@ -1458,42 +1526,61 @@ function init() {
 }
 
 window.addEventListener("hashchange", function() {
-  var c=getHashCamp();
-  if(c&&BY_CAMP[c]){ document.body.classList.add("camp-only"); showCamp(c); }
-  else { document.body.classList.remove("camp-only"); showIndex(); }
+  var c = getHashCamp();
+  if (c && BY_CAMP[c]) {
+    document.body.classList.add("camp-only");
+    showCamp(c);
+  } else {
+    document.body.classList.remove("camp-only");
+    showIndex();
+  }
 });
 
 /* ═══════════════════════════════════════
-   기사 숨기기
+   기사 숨기기 관리
 ═══════════════════════════════════════ */
-var HIDDEN_KEY="hiddenDrivers_v1", HIDDEN_SET={}, HIDE_PENDING={}, HIDE_CAMP_NOW="";
+var HIDDEN_KEY   = "hiddenDrivers_v1";
+var HIDDEN_SET   = {};
+var HIDE_PENDING = {};
+var HIDE_CAMP_NOW = "";
 
 function loadHiddenSet() {
-  try { var raw=localStorage.getItem(HIDDEN_KEY); if(raw) HIDDEN_SET=JSON.parse(raw); } catch(e){}
-  var xhr=new XMLHttpRequest();
-  xhr.open("GET",API_URL+"?action=getHidden",true); xhr.timeout=10000;
-  xhr.onload=function(){
+  try {
+    var raw = localStorage.getItem(HIDDEN_KEY);
+    if (raw) HIDDEN_SET = JSON.parse(raw);
+  } catch(e) {}
+
+  var xhr = new XMLHttpRequest();
+  xhr.open("GET", API_URL + "?action=getHidden", true);
+  xhr.timeout = 10000;
+  xhr.onload = function() {
     try {
-      var res=JSON.parse(xhr.responseText);
-      if(res.ok&&Array.isArray(res.names)){
-        HIDDEN_SET={};
-        res.names.forEach(function(n){ if(n) HIDDEN_SET[n]=true; });
-        try{localStorage.setItem(HIDDEN_KEY,JSON.stringify(HIDDEN_SET));}catch(e){}
-        var pi=document.getElementById("pg-index"), pc=document.getElementById("pg-camp");
-        if(pi&&pi.classList.contains("on")&&!(pc&&pc.classList.contains("on"))) showIndex();
+      var res = JSON.parse(xhr.responseText);
+      if (res.ok && Array.isArray(res.names)) {
+        HIDDEN_SET = {};
+        res.names.forEach(function(n){ if(n) HIDDEN_SET[n] = true; });
+        try { localStorage.setItem(HIDDEN_KEY, JSON.stringify(HIDDEN_SET)); } catch(e) {}
+        var pgIdx = document.getElementById("pg-index");
+        var pgCmp = document.getElementById("pg-camp");
+        if (pgIdx && pgIdx.classList.contains("on") && !(pgCmp && pgCmp.classList.contains("on"))) {
+          showIndex();
+        }
       }
-    } catch(ex){}
+    } catch(ex) {}
   };
-  xhr.onerror=xhr.ontimeout=function(){};
+  xhr.onerror = xhr.ontimeout = function() {};
   xhr.send();
 }
 
 function saveHiddenSet() {
-  var names=Object.keys(HIDDEN_SET);
-  try{localStorage.setItem(HIDDEN_KEY,JSON.stringify(HIDDEN_SET));}catch(e){}
-  var xhr=new XMLHttpRequest();
-  xhr.open("GET",API_URL+"?action=setHidden&data="+encodeURIComponent(JSON.stringify(names)),true);
-  xhr.timeout=15000; xhr.send();
+  var names = Object.keys(HIDDEN_SET);
+  var dataJson = JSON.stringify(names);
+  try { localStorage.setItem(HIDDEN_KEY, JSON.stringify(HIDDEN_SET)); } catch(e) {}
+  var xhr = new XMLHttpRequest();
+  var url = API_URL + "?action=setHidden&data=" + encodeURIComponent(dataJson);
+  xhr.open("GET", url, true);
+  xhr.timeout = 15000;
+  xhr.send();
 }
 
 function visibleDrivers(drivers) {
@@ -1501,59 +1588,72 @@ function visibleDrivers(drivers) {
 }
 
 function showHideManager() {
-  if(!DRIVERS.length) return;
-  HIDE_PENDING=Object.assign({},HIDDEN_SET);
-  var tabs=document.getElementById("hide-camp-tabs");
-  tabs.innerHTML="";
-  CAMPS.forEach(function(camp,i){
-    var btn=document.createElement("button");
-    btn.className="hide-camp-tab"+(i===0?" active":"");
-    btn.dataset.camp=camp;
-    var hc=BY_CAMP[camp].filter(function(d){return HIDE_PENDING[d.name];}).length;
-    btn.innerHTML=camp+(hc>0?"<span class='htab-cnt'>"+hc+"</span>":"");
-    btn.onclick=function(){ switchHideCamp(camp); };
+  if (!DRIVERS.length) return;
+  HIDE_PENDING = Object.assign({}, HIDDEN_SET);
+
+  var tabs = document.getElementById("hide-camp-tabs");
+  tabs.innerHTML = "";
+  CAMPS.forEach(function(camp, i) {
+    var btn = document.createElement("button");
+    btn.className = "hide-camp-tab" + (i === 0 ? " active" : "");
+    btn.dataset.camp = camp;
+    var hiddenCnt = BY_CAMP[camp].filter(function(d){ return HIDE_PENDING[d.name]; }).length;
+    btn.innerHTML = camp + (hiddenCnt > 0 ? "<span class='htab-cnt'>"+hiddenCnt+"</span>" : "");
+    btn.onclick = function() { switchHideCamp(camp); };
     tabs.appendChild(btn);
   });
-  HIDE_CAMP_NOW=CAMPS[0]||"";
-  document.getElementById("hide-search").value="";
-  renderHideList("",HIDE_CAMP_NOW);
+
+  HIDE_CAMP_NOW = CAMPS[0] || "";
+  document.getElementById("hide-search").value = "";
+  renderHideList("", HIDE_CAMP_NOW);
   updateHideCount();
-  document.getElementById("hide-modal").style.display="flex";
+
+  document.getElementById("hide-modal").style.display = "flex";
 }
 
 function switchHideCamp(camp) {
-  HIDE_CAMP_NOW=camp;
-  document.querySelectorAll(".hide-camp-tab").forEach(function(t){ t.classList.toggle("active",t.dataset.camp===camp); });
-  document.getElementById("hide-search").value="";
-  renderHideList("",camp);
+  HIDE_CAMP_NOW = camp;
+  document.querySelectorAll(".hide-camp-tab").forEach(function(t){
+    t.classList.toggle("active", t.dataset.camp === camp);
+  });
+  document.getElementById("hide-search").value = "";
+  renderHideList("", camp);
 }
 
-function renderHideList(query,camp) {
-  var drivers=BY_CAMP[camp]||[];
-  query=query.trim().toLowerCase();
-  if(query) drivers=drivers.filter(function(d){ return d.name.toLowerCase().indexOf(query)>-1||d.id.toLowerCase().indexOf(query)>-1; });
-  var list=document.getElementById("hide-list");
-  list.innerHTML="";
-  if(!drivers.length){
-    list.innerHTML="<div style='text-align:center;padding:24px;color:var(--text3);font-size:13px'>검색 결과가 없습니다</div>";
+function renderHideList(query, camp) {
+  var drivers = BY_CAMP[camp] || [];
+  query = query.trim().toLowerCase();
+  if (query) drivers = drivers.filter(function(d){ return d.name.toLowerCase().indexOf(query) > -1 || d.id.toLowerCase().indexOf(query) > -1; });
+
+  var list = document.getElementById("hide-list");
+  list.innerHTML = "";
+
+  if (drivers.length === 0) {
+    list.innerHTML = "<div style='text-align:center;padding:24px;color:var(--text3);font-size:13px'>검색 결과가 없습니다</div>";
     return;
   }
-  drivers.forEach(function(d){
-    var isHidden=!!HIDE_PENDING[d.name];
-    var todayVal=d.schedule[TODAY]||"";
-    var working=isWork(todayVal);
-    var row=document.createElement("div");
-    row.className="hide-driver-row"+(isHidden?" hidden-row":"");
-    row.dataset.name=d.name;
-    row.innerHTML=
-      "<input type='checkbox' class='hide-cb' "+(isHidden?"checked":"")+
-      " onchange='toggleHideDriver(\""+d.name.replace(/"/g,'&quot;')+"\")'>" +
-      "<div class='hide-dr-info'><div class='hide-dr-name'>"+d.name+"</div>"+
-      "<div class='hide-dr-sub'>"+d.id+(d.route?" · "+d.route:"")+"</div></div>"+
-      "<span class='hide-dr-status "+(working?"working":"off")+"'>"+(working?"출근":(todayVal||"휴무"))+"</span>";
-    row.onclick=function(e){
-      if(e.target.tagName!=="INPUT"){
-        var cb=row.querySelector(".hide-cb"); cb.checked=!cb.checked;
+
+  drivers.forEach(function(d) {
+    var isHidden  = !!HIDE_PENDING[d.name];
+    var todayVal  = d.schedule[TODAY] || "";
+    var working   = isWork(todayVal);
+
+    var row = document.createElement("div");
+    row.className = "hide-driver-row" + (isHidden ? " hidden-row" : "");
+    row.dataset.name = d.name;
+
+    row.innerHTML =
+      "<input type='checkbox' class='hide-cb' " + (isHidden ? "checked" : "") + " onchange='toggleHideDriver(\""+d.name.replace(/"/g,'&quot;')+"\")'>" +
+      "<div class='hide-dr-info'>" +
+        "<div class='hide-dr-name'>" + d.name + "</div>" +
+        "<div class='hide-dr-sub'>" + d.id + (d.route ? " · " + d.route : "") + "</div>" +
+      "</div>" +
+      "<span class='hide-dr-status " + (working ? "working" : "off") + "'>" + (working ? "출근" : (todayVal || "휴무")) + "</span>";
+
+    row.onclick = function(e) {
+      if (e.target.tagName !== "INPUT") {
+        var cb = row.querySelector(".hide-cb");
+        cb.checked = !cb.checked;
         toggleHideDriver(d.name);
       }
     };
@@ -1561,172 +1661,307 @@ function renderHideList(query,camp) {
   });
 }
 
-function toggleHideDriver(name){
-  if(HIDE_PENDING[name]) delete HIDE_PENDING[name]; else HIDE_PENDING[name]=true;
-  document.querySelectorAll(".hide-driver-row").forEach(function(row){
-    if(row.dataset.name===name) row.classList.toggle("hidden-row",!!HIDE_PENDING[name]);
+function toggleHideDriver(name) {
+  if (HIDE_PENDING[name]) {
+    delete HIDE_PENDING[name];
+  } else {
+    HIDE_PENDING[name] = true;
+  }
+  var rows = document.querySelectorAll(".hide-driver-row");
+  rows.forEach(function(row) {
+    if (row.dataset.name === name) {
+      row.classList.toggle("hidden-row", !!HIDE_PENDING[name]);
+    }
   });
+  updateTabBadges();
+  updateHideCount();
+}
+
+function updateTabBadges() {
+  document.querySelectorAll(".hide-camp-tab").forEach(function(t) {
+    var camp = t.dataset.camp;
+    var cnt  = (BY_CAMP[camp]||[]).filter(function(d){ return HIDE_PENDING[d.name]; }).length;
+    var badge = t.querySelector(".htab-cnt");
+    if (cnt > 0) {
+      if (!badge) { badge = document.createElement("span"); badge.className = "htab-cnt"; t.appendChild(badge); }
+      badge.textContent = cnt;
+    } else {
+      if (badge) badge.remove();
+    }
+  });
+}
+
+function updateHideCount() {
+  var cnt = Object.keys(HIDE_PENDING).length;
+  document.getElementById("hide-count-txt").textContent = "숨긴 기사: " + cnt + "명";
+}
+
+function selectAllVisible() {
+  var drivers = BY_CAMP[HIDE_CAMP_NOW] || [];
+  var query = document.getElementById("hide-search").value.trim().toLowerCase();
+  if (query) drivers = drivers.filter(function(d){ return d.name.toLowerCase().indexOf(query) > -1; });
+  drivers.forEach(function(d){ HIDE_PENDING[d.name] = true; });
+  renderHideList(document.getElementById("hide-search").value, HIDE_CAMP_NOW);
   updateTabBadges(); updateHideCount();
 }
 
-function updateTabBadges(){
-  document.querySelectorAll(".hide-camp-tab").forEach(function(t){
-    var camp=t.dataset.camp;
-    var cnt=(BY_CAMP[camp]||[]).filter(function(d){return HIDE_PENDING[d.name];}).length;
-    var badge=t.querySelector(".htab-cnt");
-    if(cnt>0){ if(!badge){badge=document.createElement("span");badge.className="htab-cnt";t.appendChild(badge);} badge.textContent=cnt; }
-    else { if(badge) badge.remove(); }
-  });
+function deselectAllVisible() {
+  var drivers = BY_CAMP[HIDE_CAMP_NOW] || [];
+  var query = document.getElementById("hide-search").value.trim().toLowerCase();
+  if (query) drivers = drivers.filter(function(d){ return d.name.toLowerCase().indexOf(query) > -1; });
+  drivers.forEach(function(d){ delete HIDE_PENDING[d.name]; });
+  renderHideList(document.getElementById("hide-search").value, HIDE_CAMP_NOW);
+  updateTabBadges(); updateHideCount();
 }
 
-function updateHideCount(){ document.getElementById("hide-count-txt").textContent="숨긴 기사: "+Object.keys(HIDE_PENDING).length+"명"; }
-function selectAllVisible(){ var d=BY_CAMP[HIDE_CAMP_NOW]||[]; var q=document.getElementById("hide-search").value.trim().toLowerCase(); if(q) d=d.filter(function(x){return x.name.toLowerCase().indexOf(q)>-1;}); d.forEach(function(x){HIDE_PENDING[x.name]=true;}); renderHideList(document.getElementById("hide-search").value,HIDE_CAMP_NOW); updateTabBadges(); updateHideCount(); }
-function deselectAllVisible(){ var d=BY_CAMP[HIDE_CAMP_NOW]||[]; var q=document.getElementById("hide-search").value.trim().toLowerCase(); if(q) d=d.filter(function(x){return x.name.toLowerCase().indexOf(q)>-1;}); d.forEach(function(x){delete HIDE_PENDING[x.name];}); renderHideList(document.getElementById("hide-search").value,HIDE_CAMP_NOW); updateTabBadges(); updateHideCount(); }
-function resetAllHidden(){ if(!confirm("숨긴 기사를 모두 초기화할까요?")) return; HIDE_PENDING={}; renderHideList(document.getElementById("hide-search").value,HIDE_CAMP_NOW); updateTabBadges(); updateHideCount(); }
-function filterHideList(val){ renderHideList(val,HIDE_CAMP_NOW); }
+function resetAllHidden() {
+  if (!confirm("숨긴 기사를 모두 초기화할까요?")) return;
+  HIDE_PENDING = {};
+  renderHideList(document.getElementById("hide-search").value, HIDE_CAMP_NOW);
+  updateTabBadges(); updateHideCount();
+}
 
-function applyHideList(){
-  HIDDEN_SET=Object.assign({},HIDE_PENDING);
+function filterHideList(val) {
+  renderHideList(val, HIDE_CAMP_NOW);
+}
+
+function applyHideList() {
+  HIDDEN_SET = Object.assign({}, HIDE_PENDING);
   saveHiddenSet();
   closeHideManager();
-  var cp=document.getElementById("pg-camp");
-  var cn=document.getElementById("cp-title").textContent;
-  if(cp&&cp.classList.contains("on")&&cn) showCamp(cn); else showIndex();
+
+  var campPage = document.getElementById("pg-camp");
+  var campName = document.getElementById("cp-title").textContent;
+  if (campPage && campPage.classList.contains("on") && campName) {
+    showCamp(campName);
+  } else {
+    showIndex();
+  }
 }
-function closeHideManager(){ document.getElementById("hide-modal").style.display="none"; }
+
+function closeHideManager() {
+  document.getElementById("hide-modal").style.display = "none";
+}
 
 /* ═══════════════════════════════════════
    이전 스케줄
 ═══════════════════════════════════════ */
-var HIST_MODE=false;
+var HIST_MODE = false;
 
-function showHistoryModal(){
-  var pdd=new Date(TODAY+"T00:00:00");
-  var thisSun=new Date(pdd); thisSun.setDate(pdd.getDate()-pdd.getDay());
-  var container=document.getElementById("hist-weeks");
-  container.innerHTML="";
-  for(var w=0;w<=2;w++){
-    var sun=new Date(thisSun); sun.setDate(thisSun.getDate()-w*7);
-    var sunDs=toDS(sun); var satDs=addD(sunDs,6);
-    var btn=document.createElement("button");
-    btn.className="hist-week-btn"+(w===0?" hw-current":"");
-    btn.innerHTML="<div>"+(w===0?"📌 이번 주 (현재)":w+"주 전")+"</div>"+
-      "<div class='hw-range'>"+fmtFull(sunDs)+" ~ "+fmtFull(satDs)+"</div>";
-    (function(sd,sat,isCur){
-      btn.onclick=function(){ closeHistoryModal(); if(isCur) backToToday(); else loadHistWeek(sd,sat); };
-    })(sunDs,satDs,w===0);
+function showHistoryModal() {
+  var pdd     = new Date(TODAY + "T00:00:00");
+  var thisSun = new Date(pdd);
+  thisSun.setDate(pdd.getDate() - pdd.getDay());
+
+  var container = document.getElementById("hist-weeks");
+  container.innerHTML = "";
+
+  for (var w = 0; w <= 2; w++) {
+    var sun = new Date(thisSun);
+    sun.setDate(thisSun.getDate() - w * 7);
+    var sunDs = toDS(sun);
+    var satDs = addD(sunDs, 6);
+
+    var btn = document.createElement("button");
+    btn.className = "hist-week-btn" + (w === 0 ? " hw-current" : "");
+
+    var label = w === 0 ? "📌 이번 주 (현재)" : w + "주 전";
+    btn.innerHTML =
+      "<div>" + label + "</div>" +
+      "<div class='hw-range'>" + fmtFull(sunDs) + " ~ " + fmtFull(satDs) + "</div>";
+
+    (function(weekSun, weekSat, isCurrentWeek) {
+      btn.onclick = function() {
+        closeHistoryModal();
+        if (isCurrentWeek) {
+          backToToday();
+        } else {
+          loadHistWeek(weekSun, weekSat);
+        }
+      };
+    })(sunDs, satDs, w === 0);
+
     container.appendChild(btn);
   }
-  document.getElementById("hist-modal").style.display="flex";
+
+  document.getElementById("hist-modal").style.display = "flex";
 }
 
-function closeHistoryModal(){ document.getElementById("hist-modal").style.display="none"; }
+function closeHistoryModal() {
+  document.getElementById("hist-modal").style.display = "none";
+}
 
-function loadHistWeek(sunDs,satDs){
+function loadHistWeek(sunDs, satDs) {
   closeHistoryModal();
-  renderHistWeek(sunDs,satDs,document.getElementById("cp-title").textContent);
+  var campName = document.getElementById("cp-title").textContent;
+  renderHistWeek(sunDs, satDs, campName);
 }
 
-function renderHistWeek(sunDs,satDs,campName){
-  var allDrivers=BY_CAMP[campName]||[];
-  var drivers=visibleDrivers(allDrivers);
-  var histW1=[];
-  for(var i=0;i<7;i++){
-    var ds=addD(sunDs,i); var dw=new Date(ds+"T00:00:00").getDay();
-    histW1.push({ds:ds,dow:dw,dn:KD[dw],peak:false,inSheet:true,isToday:ds===TODAY});
+function renderHistWeek(sunDs, satDs, campName) {
+  var allDrivers = BY_CAMP[campName] || [];
+  var drivers = visibleDrivers(allDrivers);
+
+  var histW1 = [];
+  for (var i = 0; i < 7; i++) {
+    var ds = addD(sunDs, i);
+    var dw = new Date(ds + "T00:00:00").getDay();
+    histW1.push({ ds: ds, dow: dw, dn: KD[dw], peak: false, inSheet: true, isToday: ds === TODAY });
   }
-  var hasData=drivers.some(function(d){ return histW1.some(function(w){return d.schedule[w.ds];}); });
-  var useGreen=(campName==="백업"||campName==="운영자");
-  document.getElementById("cp-thead-w1").innerHTML=buildWHead(histW1,"w1h","📅 "+fmtFull(sunDs)+" ~ "+fmtFull(satDs));
-  document.getElementById("cp-tbody-w1").innerHTML=hasData
-    ?buildWRows(drivers,histW1,"w1h")
-    :"<tr><td colspan='99' style='text-align:center;padding:24px;color:var(--text3);font-size:13px'>📭 해당 기간의 스케줄 데이터가 없습니다</td></tr>";
-  document.getElementById("wl2-badge").style.display="none";
-  document.getElementById("wl2-range").textContent="";
-  document.getElementById("cp-thead-w2").innerHTML="";
-  document.getElementById("cp-tbody-w2").innerHTML="";
-  document.getElementById("mobile-list").innerHTML=buildMobileCards(drivers,useGreen,histW1,[]);
-  document.getElementById("wl1-range").textContent=fmtFull(sunDs)+" ~ "+fmtFull(satDs);
-  document.getElementById("wl1-badge").style.display="";
-  HIST_MODE=true;
-  var banner=document.getElementById("hist-banner");
-  banner.style.display="block";
-  document.getElementById("hist-banner-txt").textContent="📅 이전 스케줄 조회 중: "+fmtFull(sunDs)+" ~ "+fmtFull(satDs);
-  document.querySelectorAll(".dc-head").forEach(function(head){
-    head.onclick=function(){ head.parentElement.classList.toggle("collapsed"); };
+
+  var hasData = drivers.some(function(d) {
+    return histW1.some(function(w) { return d.schedule[w.ds]; });
   });
-  window.scrollTo(0,0);
+
+  var useGreen = (campName === "백업" || campName === "운영자");
+
+  document.getElementById("cp-thead-w1").innerHTML = buildWHead(
+    histW1, "w1h",
+    "📅 " + fmtFull(sunDs) + " ~ " + fmtFull(satDs)
+  );
+  document.getElementById("cp-tbody-w1").innerHTML = hasData
+    ? buildWRows(drivers, histW1, "w1h", useGreen)
+    : "<tr><td colspan='99' style='text-align:center;padding:24px;color:var(--text3);font-size:13px'>📭 해당 기간의 스케줄 데이터가 없습니다</td></tr>";
+
+  document.getElementById("wl2-badge").style.display = "none";
+  document.getElementById("wl2-range").textContent = "";
+  document.getElementById("cp-thead-w2").innerHTML = "";
+  document.getElementById("cp-tbody-w2").innerHTML = "";
+
+  document.getElementById("mobile-list").innerHTML = buildMobileCards(drivers, useGreen, histW1, []);
+
+  document.getElementById("wl1-range").textContent = fmtFull(sunDs) + " ~ " + fmtFull(satDs);
+  document.getElementById("wl1-badge").style.display = "";
+
+  HIST_MODE = true;
+  var banner = document.getElementById("hist-banner");
+  banner.style.display = "block";
+  document.getElementById("hist-banner-txt").textContent =
+    "📅 이전 스케줄 조회 중: " + fmtFull(sunDs) + " ~ " + fmtFull(satDs);
+
+  document.querySelectorAll(".dc-head").forEach(function(head) {
+    head.onclick = function() { head.parentElement.classList.toggle("collapsed"); };
+  });
+
+  window.scrollTo(0, 0);
 }
 
-function backToToday(){
-  HIST_MODE=false;
-  document.getElementById("hist-banner").style.display="none";
-  var b2=document.getElementById("wl2-badge"); if(b2) b2.style.display="";
-  var cn=document.getElementById("cp-title").textContent;
-  if(cn) showCamp(cn);
+function backToToday() {
+  HIST_MODE = false;
+  document.getElementById("hist-banner").style.display = "none";
+  var b2 = document.getElementById("wl2-badge");
+  if (b2) b2.style.display = "";
+  var campName = document.getElementById("cp-title").textContent;
+  if (campName) showCamp(campName);
 }
 
 /* ═══════════════════════════════════════
-   캠프 위치
+   캠프 위치 모달 (실시간 API 조회)
 ═══════════════════════════════════════ */
-function showLocModal(){
-  var modal=document.getElementById("loc-modal");
-  var body=document.getElementById("loc-body");
-  var title=document.getElementById("loc-title");
-  var campName=""; var isBackup=false;
-  if(pgCamp.classList.contains("on")){
-    campName=document.getElementById("cp-title").textContent.trim();
-    isBackup=(campName==="백업"||campName==="운영자");
+var CAMP_LOCATIONS = {};
+
+function showLocModal() {
+  var modal = document.getElementById("loc-modal");
+  var body  = document.getElementById("loc-body");
+  var title = document.getElementById("loc-title");
+
+  var campName = "";
+  var isBackup = false;
+  if (pgCamp.classList.contains("on")) {
+    campName = document.getElementById("cp-title").textContent.trim();
+    isBackup = (campName === "백업" || campName === "운영자");
   }
-  title.textContent="📍 "+(isBackup||!campName?"전체 캠프 위치":campName+" 위치");
-  body.innerHTML="<div class='loc-loading'>⏳ 위치 정보 불러오는 중…</div>";
-  modal.style.display="flex";
-  var btn=document.getElementById("btn-loc"); if(btn) btn.classList.add("loading");
-  var xhr=new XMLHttpRequest();
-  xhr.open("GET",API_URL+"?action=getCampLocations",true); xhr.timeout=15000;
-  xhr.onload=function(){
-    if(btn) btn.classList.remove("loading");
-    try{ var res=JSON.parse(xhr.responseText); CAMP_LOCATIONS=(res.ok&&res.locations)?res.locations:{}; renderLocBody(campName,isBackup); }
-    catch(e){ body.innerHTML="<div class='loc-empty'>⚠️ 위치 정보를 불러오지 못했습니다.</div>"; }
+
+  if (isBackup) {
+    title.textContent = "📍 전체 캠프 위치";
+  } else if (campName) {
+    title.textContent = "📍 " + campName + " 위치";
+  } else {
+    title.textContent = "📍 전체 캠프 위치";
+  }
+
+  body.innerHTML = "<div class='loc-loading'>⏳ 위치 정보 불러오는 중…</div>";
+  modal.style.display = "flex";
+
+  var btn = document.getElementById("btn-loc");
+  if (btn) btn.classList.add("loading");
+
+  var xhr = new XMLHttpRequest();
+  xhr.open("GET", API_URL + "?action=getCampLocations", true);
+  xhr.timeout = 15000;
+
+  xhr.onload = function() {
+    if (btn) btn.classList.remove("loading");
+    try {
+      var res = JSON.parse(xhr.responseText);
+      CAMP_LOCATIONS = (res.ok && res.locations) ? res.locations : {};
+      renderLocBody(campName, isBackup);
+    } catch(e) {
+      body.innerHTML = "<div class='loc-empty'>⚠️ 위치 정보를 불러오지 못했습니다.<br><span style='font-size:11px'>잠시 후 다시 시도해주세요</span></div>";
+    }
   };
-  xhr.onerror=xhr.ontimeout=function(){ if(btn) btn.classList.remove("loading"); body.innerHTML="<div class='loc-empty'>⚠️ 네트워크 오류</div>"; };
+  xhr.onerror = xhr.ontimeout = function() {
+    if (btn) btn.classList.remove("loading");
+    body.innerHTML = "<div class='loc-empty'>⚠️ 네트워크 오류가 발생했습니다.<br><span style='font-size:11px'>인터넷 연결을 확인해주세요</span></div>";
+  };
   xhr.send();
 }
 
-function renderLocBody(campName,isBackup){
-  var body=document.getElementById("loc-body"); body.innerHTML="";
-  var targets=[];
-  if(isBackup||!campName){
-    targets=CAMPS.filter(function(c){return CAMP_LOCATIONS[c];});
-    Object.keys(CAMP_LOCATIONS).forEach(function(c){ if(targets.indexOf(c)===-1) targets.push(c); });
+function renderLocBody(campName, isBackup) {
+  var body = document.getElementById("loc-body");
+  body.innerHTML = "";
+
+  var targets = [];
+  if (isBackup || !campName) {
+    targets = CAMPS.filter(function(c){ return CAMP_LOCATIONS[c]; });
+    Object.keys(CAMP_LOCATIONS).forEach(function(c){
+      if (targets.indexOf(c) === -1) targets.push(c);
+    });
   } else {
-    if(CAMP_LOCATIONS[campName]) targets=[campName];
+    if (CAMP_LOCATIONS[campName]) targets = [campName];
   }
-  if(!targets.length){
-    body.innerHTML="<div class='loc-empty'>📭 위치 정보가 없습니다.</div>"; return;
+
+  if (targets.length === 0) {
+    body.innerHTML =
+      "<div class='loc-empty'>📭 위치 정보가 없습니다.<br>" +
+      "<span style='font-size:11px;color:var(--text3)'>캠프위치 시트에 데이터를 입력해주세요</span></div>";
+    return;
   }
-  targets.forEach(function(name){
-    var entries=CAMP_LOCATIONS[name]; if(!entries) return;
-    if(!Array.isArray(entries)) entries=[{gubun:"",address:entries}];
-    entries.forEach(function(entry){
-      var addr=entry.address||entry||""; var gubun=entry.gubun||"";
-      if(!addr) return;
-      var row=document.createElement("div"); row.className="loc-row"; row.style.cursor="pointer";
-      row.innerHTML="<div class='loc-camp-name'>📦 "+name+"</div>"+
-        "<div class='loc-address'>"+(gubun?"<span style='font-size:10px;color:var(--text3);display:block;margin-bottom:2px'>"+gubun+"</span>":"")+
-        "<span style='color:var(--accent);text-decoration:underline;text-underline-offset:2px'>"+addr+"</span>"+
-        "<span style='font-size:10px;color:var(--text3);display:block;margin-top:3px'>📍 티맵으로 열기</span></div>";
-      row.addEventListener("click",function(){
-        var isMobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-        if(isMobile) location.href="tmap://search?name="+encodeURIComponent(addr);
-        else window.open("https://www.tmap.co.kr/tmap2/common/search.do?searchText="+encodeURIComponent(addr),"_blank");
+
+  targets.forEach(function(name) {
+    var entries = CAMP_LOCATIONS[name];
+    if (!entries) return;
+    if (!Array.isArray(entries)) entries = [{gubun: "", address: entries}];
+
+    entries.forEach(function(entry) {
+      var addr   = entry.address || entry || "";
+      var gubun  = entry.gubun  || "";
+      if (!addr) return;
+      var row = document.createElement("div");
+      row.className = "loc-row";
+      row.style.cursor = "pointer";
+      row.innerHTML =
+        "<div class='loc-camp-name'>📦 " + name + "</div>" +
+        "<div class='loc-address'>" +
+          (gubun ? "<span style='font-size:10px;color:var(--text3);display:block;margin-bottom:2px'>" + gubun + "</span>" : "") +
+          "<span style='color:var(--accent);text-decoration:underline;text-underline-offset:2px'>" + addr + "</span>" +
+          "<span style='font-size:10px;color:var(--text3);display:block;margin-top:3px'>📍 티맵으로 열기</span>" +
+        "</div>";
+      row.addEventListener("click", function() {
+        var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        if (isMobile) {
+          location.href = "tmap://search?name=" + encodeURIComponent(addr);
+        } else {
+          window.open("https://www.tmap.co.kr/tmap2/common/search.do?searchText=" + encodeURIComponent(addr), "_blank");
+        }
       });
       body.appendChild(row);
     });
   });
 }
 
-function closeLocModal(){ document.getElementById("loc-modal").style.display="none"; }
+function closeLocModal() {
+  document.getElementById("loc-modal").style.display = "none";
+}
 
 </script>
 </body>
