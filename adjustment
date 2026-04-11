@@ -1,0 +1,615 @@
+adjustment<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>정산서 열람 포털</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans KR', -apple-system, sans-serif;
+    background: #F4F6F9;
+    color: #1A1A2E;
+    min-height: 100vh;
+  }
+
+  .hidden { display: none !important; }
+
+  .spinner {
+    display: inline-block; width: 16px; height: 16px;
+    border: 2px solid #ddd; border-top-color: #185FA5;
+    border-radius: 50%; animation: spin 0.6s linear infinite;
+    vertical-align: middle; margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: #1A1A2E; color: #fff; padding: 10px 20px;
+    border-radius: 8px; font-size: 13px; z-index: 9999;
+    opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
+
+  /* ── 로그인 ── */
+  #screen-login {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; padding: 1rem;
+  }
+  .login-card {
+    background: #fff; border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    padding: 2.5rem 2rem; width: 100%; max-width: 400px;
+  }
+  .login-logo { text-align: center; margin-bottom: 2rem; }
+  .login-logo .icon-wrap {
+    width: 56px; height: 56px; background: #EBF3FC;
+    border-radius: 14px; display: inline-flex;
+    align-items: center; justify-content: center; margin-bottom: 12px;
+  }
+  .login-logo h1 { font-size: 20px; font-weight: 700; }
+  .login-logo p  { font-size: 13px; color: #888; margin-top: 4px; }
+
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-size: 13px; font-weight: 600; color: #555; margin-bottom: 6px; }
+  .form-group input {
+    width: 100%; padding: 11px 14px;
+    border: 1.5px solid #E0E4EB; border-radius: 8px;
+    font-size: 15px; outline: none; transition: border-color 0.2s;
+  }
+  .form-group input:focus { border-color: #185FA5; }
+
+  .btn-login {
+    width: 100%; padding: 12px; background: #185FA5; color: #fff;
+    border: none; border-radius: 8px; font-size: 15px; font-weight: 600;
+    cursor: pointer; margin-top: 4px; transition: background 0.2s;
+  }
+  .btn-login:hover:not(:disabled) { background: #0C447C; }
+  .btn-login:disabled { background: #aaa; cursor: not-allowed; }
+
+  .login-error {
+    background: #FFF0F0; color: #C0392B; border-radius: 8px;
+    padding: 10px 14px; font-size: 13px; margin-top: 12px;
+  }
+
+  /* ── 대시보드 ── */
+  #screen-dash { display: none; }
+
+  .topbar {
+    background: #fff; border-bottom: 1px solid #E8ECF2;
+    padding: 0 1.5rem; height: 56px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 10px; }
+  .topbar-logo { font-size: 16px; font-weight: 700; color: #185FA5; }
+  .topbar-divider { width: 1px; height: 20px; background: #E0E4EB; }
+  .topbar-user { font-size: 14px; color: #555; }
+  .topbar-user strong { color: #1A1A2E; }
+  .btn-logout {
+    font-size: 13px; color: #888; background: none;
+    border: 1px solid #E0E4EB; border-radius: 6px;
+    padding: 5px 12px; cursor: pointer;
+  }
+  .btn-logout:hover { background: #F4F6F9; }
+
+  .main-content { max-width: 1040px; margin: 0 auto; padding: 1.5rem 1rem; }
+
+  /* 요약 카드 */
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap: 12px; margin-bottom: 1.5rem; }
+  .summary-card { background:#fff; border-radius:12px; padding:1rem 1.25rem; border:1px solid #E8ECF2; }
+  .summary-card .s-label { font-size:12px; color:#888; margin-bottom:6px; }
+  .summary-card .s-value { font-size:20px; font-weight:700; color:#1A1A2E; }
+  .summary-card .s-value.blue { color:#185FA5; }
+
+  /* 2컬럼 레이아웃 */
+  .two-col { display: grid; grid-template-columns: 320px 1fr; gap: 16px; align-items: start; }
+  @media (max-width: 720px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* 목록 패널 */
+  .panel { background:#fff; border-radius:12px; border:1px solid #E8ECF2; overflow:hidden; }
+  .panel-header {
+    padding: 14px 16px 10px; border-bottom: 1px solid #E8ECF2;
+    font-size: 14px; font-weight: 600; color: #1A1A2E;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .panel-badge { font-size:12px; background:#EBF3FC; color:#185FA5; padding:2px 8px; border-radius:99px; }
+
+  /* 연도 그룹 */
+  .year-group { border-bottom: 1px solid #F0F2F5; }
+  .year-group:last-child { border-bottom: none; }
+
+  .year-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px; cursor: pointer;
+    background: #F8FAFD;
+    font-size: 13px; font-weight: 700; color: #185FA5;
+    user-select: none;
+  }
+  .year-header:hover { background: #EBF3FC; }
+  .year-arrow { font-size: 11px; color: #aaa; transition: transform 0.2s; }
+  .year-arrow.open { transform: rotate(180deg); }
+
+  .month-list { display: none; }
+  .month-list.open { display: block; }
+
+  .month-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px 10px 28px; cursor: pointer;
+    border-bottom: 1px solid #F4F6F9; transition: background 0.15s;
+  }
+  .month-item:last-child { border-bottom: none; }
+  .month-item:hover { background: #F8FAFD; }
+  .month-item.active { background: #EBF3FC; }
+  .month-item .m-label { font-size: 14px; font-weight: 600; color: #1A1A2E; }
+  .month-item .m-sub   { font-size: 12px; color: #888; margin-top: 2px; }
+  .pdf-badge { font-size:11px; padding:2px 8px; border-radius:99px; background:#E8F5E9; color:#2E7D32; font-weight:600; }
+
+  .file-list-wrap { max-height: 500px; overflow-y: auto; }
+  .empty-msg { padding: 2.5rem 1rem; text-align:center; color:#aaa; font-size:14px; }
+
+  /* 뷰어 패널 */
+  .viewer-panel { background:#fff; border-radius:12px; border:1px solid #E8ECF2; overflow:hidden; }
+  .viewer-placeholder { padding:5rem 2rem; text-align:center; }
+  .viewer-placeholder .v-icon { font-size:40px; margin-bottom:12px; }
+  .viewer-placeholder p { font-size:14px; color:#aaa; }
+
+  .viewer-header {
+    padding: 1rem 1.25rem; border-bottom: 1px solid #E8ECF2;
+    display: flex; align-items: flex-start; gap: 12px;
+  }
+  .vh-icon { font-size:28px; flex-shrink:0; }
+  .vh-info { flex: 1; }
+  .vh-period { font-size:18px; font-weight:700; color:#1A1A2E; }
+  .vh-filename { font-size:13px; color:#888; margin-top:3px; }
+  .vh-meta { font-size:12px; color:#aaa; margin-top:2px; }
+
+  .viewer-actions { padding:1rem 1.25rem; display:flex; gap:8px; }
+  .btn-view-pdf {
+    flex:1; padding:10px;
+    border:1.5px solid #185FA5; border-radius:8px;
+    background:#fff; color:#185FA5;
+    font-size:14px; font-weight:600; cursor:pointer; transition:background 0.15s;
+  }
+  .btn-view-pdf:hover { background:#EBF3FC; }
+  .btn-download {
+    flex:1; padding:10px; border:none; border-radius:8px;
+    background:#185FA5; color:#fff;
+    font-size:14px; font-weight:600; cursor:pointer; transition:background 0.2s;
+  }
+  .btn-download:hover:not(:disabled) { background:#0C447C; }
+  .btn-download:disabled { background:#aaa; cursor:not-allowed; }
+
+  .pdf-frame-wrap { padding:0 1rem 1rem; }
+  #pdf-frame { width:100%; height:520px; border:1px solid #E8ECF2; border-radius:8px; display:none; }
+
+  /* 비밀번호 변경 */
+  .pw-section { margin-top:1.5rem; background:#fff; border-radius:12px; border:1px solid #E8ECF2; overflow:hidden; }
+  .pw-toggle {
+    width:100%; padding:14px 16px; background:none; border:none;
+    text-align:left; font-size:14px; font-weight:600; color:#555;
+    cursor:pointer; display:flex; align-items:center; justify-content:space-between;
+  }
+  .pw-toggle:hover { background:#F8FAFD; }
+  .pw-form { padding:0 16px 16px; display:none; }
+  .pw-form.open { display:block; }
+  .pw-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+  .pw-row input {
+    flex:1; min-width:130px; padding:9px 12px;
+    border:1.5px solid #E0E4EB; border-radius:8px; font-size:14px; outline:none;
+  }
+  .pw-row input:focus { border-color:#185FA5; }
+  .btn-pw-change {
+    padding:9px 18px; background:#185FA5; color:#fff;
+    border:none; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer;
+  }
+  .pw-msg { font-size:13px; margin-top:8px; }
+  .pw-msg.ok { color:#2E7D32; }
+  .pw-msg.err { color:#C0392B; }
+</style>
+</head>
+<body>
+
+<!-- ══════ 로그인 ══════ -->
+<div id="screen-login">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="icon-wrap">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
+             stroke="#185FA5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="1" y="3" width="15" height="13" rx="2"/>
+          <path d="M16 8l5 3-5 3V8z"/>
+        </svg>
+      </div>
+      <h1>정산서 열람 포털</h1>
+      <p>아이디와 비밀번호를 입력하세요</p>
+    </div>
+    <div class="form-group">
+      <label for="inp-id">아이디</label>
+      <input type="text" id="inp-id" placeholder="기사 아이디" autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label for="inp-pw">비밀번호</label>
+      <input type="password" id="inp-pw" placeholder="관리자 지급 비밀번호" autocomplete="current-password">
+    </div>
+    <button class="btn-login" id="btn-login" onclick="doLogin()">로그인</button>
+    <div class="login-error hidden" id="login-error"></div>
+  </div>
+</div>
+
+
+<!-- ══════ 대시보드 ══════ -->
+<div id="screen-dash">
+
+  <div class="topbar">
+    <div class="topbar-left">
+      <span class="topbar-logo">📦 정산서 포털</span>
+      <div class="topbar-divider"></div>
+      <span class="topbar-user" id="topbar-user"></span>
+    </div>
+    <button class="btn-logout" onclick="doLogout()">로그아웃</button>
+  </div>
+
+  <div class="main-content">
+
+    <!-- 요약 -->
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="s-label">총 정산서</div>
+        <div class="s-value blue" id="sum-total">—</div>
+      </div>
+      <div class="summary-card">
+        <div class="s-label">연도 범위</div>
+        <div class="s-value" id="sum-years" style="font-size:15px;">—</div>
+      </div>
+      <div class="summary-card">
+        <div class="s-label">최근 정산</div>
+        <div class="s-value" id="sum-latest" style="font-size:15px;">—</div>
+      </div>
+    </div>
+
+    <div class="two-col">
+
+      <!-- 목록 패널 -->
+      <div class="panel">
+        <div class="panel-header">
+          정산서 목록
+          <span class="panel-badge" id="list-badge">0건</span>
+        </div>
+        <div class="file-list-wrap" id="file-list-wrap">
+          <div class="empty-msg"><span class="spinner"></span> 드라이브에서 불러오는 중...</div>
+        </div>
+      </div>
+
+      <!-- 뷰어 패널 -->
+      <div class="viewer-panel" id="viewer-panel">
+        <div id="viewer-placeholder" class="viewer-placeholder">
+          <div class="v-icon">📂</div>
+          <p>좌측에서 월을 선택하면<br>정산서가 표시됩니다</p>
+        </div>
+        <div id="viewer-content" class="hidden">
+          <div class="viewer-header">
+            <div class="vh-icon">📄</div>
+            <div class="vh-info">
+              <div class="vh-period" id="v-period"></div>
+              <div class="vh-filename" id="v-filename"></div>
+              <div class="vh-meta" id="v-meta"></div>
+            </div>
+          </div>
+          <div class="viewer-actions">
+            <button class="btn-view-pdf" onclick="viewPdf()">🔍 열람</button>
+            <button class="btn-download" id="btn-dl" onclick="downloadPdf()">⬇ 다운로드</button>
+          </div>
+          <div class="pdf-frame-wrap">
+            <iframe id="pdf-frame" title="정산서 미리보기"></iframe>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 비밀번호 변경 -->
+    <div class="pw-section">
+      <button class="pw-toggle" onclick="togglePwForm(this)">
+        🔒 비밀번호 변경 <span id="pw-arrow">▼</span>
+      </button>
+      <div class="pw-form" id="pw-form">
+        <div class="pw-row">
+          <input type="password" id="pw-current" placeholder="현재 비밀번호">
+          <input type="password" id="pw-new"     placeholder="새 비밀번호 (4자 이상)">
+          <input type="password" id="pw-confirm" placeholder="새 비밀번호 확인">
+          <button class="btn-pw-change" onclick="changePassword()">변경</button>
+        </div>
+        <div class="pw-msg hidden" id="pw-msg"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════ 상태 ══════
+let currentUser  = null;   // { userId, name }
+let treeData     = [];     // getSettlementList() 반환값
+let selectedFile = null;   // 현재 선택된 파일 객체
+
+// ══════ 로그인 ══════
+function doLogin() {
+  const userId   = document.getElementById('inp-id').value.trim();
+  const password = document.getElementById('inp-pw').value;
+  const errEl    = document.getElementById('login-error');
+  const btn      = document.getElementById('btn-login');
+
+  errEl.classList.add('hidden');
+  if (!userId || !password) { showErr(errEl, '아이디와 비밀번호를 입력하세요.'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 확인 중...';
+
+  google.script.run
+    .withSuccessHandler(res => {
+      btn.disabled = false; btn.textContent = '로그인';
+      if (res.success) {
+        console.log("로그인 응답:", JSON.stringify(res));  // ← 디버그
+        currentUser = { userId: res.userId, name: res.name };
+        console.log("currentUser:", JSON.stringify(currentUser));  // ← 디버그
+        switchToDash();
+      } else {
+        showErr(errEl, res.message || '로그인 실패');
+        document.getElementById('inp-pw').value = '';
+      }
+    })
+    .withFailureHandler(() => {
+      btn.disabled = false; btn.textContent = '로그인';
+      showErr(errEl, '서버 연결 오류가 발생했습니다.');
+    })
+    .verifyLogin(userId, password);
+}
+
+// ══════ 대시보드 전환 ══════
+function switchToDash() {
+  document.getElementById('screen-login').style.display = 'none';
+  document.getElementById('screen-dash').style.display  = 'block';
+  document.getElementById('topbar-user').innerHTML =
+    '<strong>' + currentUser.name + '</strong> 기사님&nbsp;&nbsp;·&nbsp;&nbsp;' + currentUser.userId;
+  loadSettlements();
+}
+
+// ══════ 로그아웃 ══════
+function doLogout() {
+  currentUser = null; treeData = []; selectedFile = null;
+  document.getElementById('screen-dash').style.display  = 'none';
+  document.getElementById('screen-login').style.display = 'flex';
+  document.getElementById('inp-id').value = '';
+  document.getElementById('inp-pw').value = '';
+  document.getElementById('file-list-wrap').innerHTML =
+    '<div class="empty-msg"><span class="spinner"></span> 드라이브에서 불러오는 중...</div>';
+  document.getElementById('viewer-placeholder').classList.remove('hidden');
+  document.getElementById('viewer-content').classList.add('hidden');
+  document.getElementById('pdf-frame').style.display = 'none';
+}
+
+// ══════ 정산서 목록 로드 ══════
+function loadSettlements() {
+  console.log("loadSettlements 호출 - currentUser:", JSON.stringify(currentUser));  // ← 디버그
+  google.script.run
+    .withSuccessHandler(res => {
+      if (!res.success) {
+        document.getElementById('file-list-wrap').innerHTML =
+          '<div class="empty-msg" style="color:#C0392B;">' + (res.message || '오류') + '</div>';
+        return;
+      }
+      treeData = res.data || [];
+      renderTree();
+      updateSummary();
+    })
+    .withFailureHandler(() => {
+      document.getElementById('file-list-wrap').innerHTML =
+        '<div class="empty-msg" style="color:#C0392B;">목록 로드 실패</div>';
+    })
+    .getSettlementList(currentUser.name, currentUser.userId);   // ← 이름 + 아이디로 파일 매칭
+}
+
+// ══════ 연도/월 트리 렌더링 ══════
+function renderTree() {
+  const wrap = document.getElementById('file-list-wrap');
+
+  // 전체 파일 수 집계
+  let total = 0;
+  treeData.forEach(y => { total += y.months.length; });
+  document.getElementById('list-badge').textContent = total + '건';
+
+  if (total === 0) {
+    wrap.innerHTML = '<div class="empty-msg">등록된 정산서가 없습니다.<br><small>관리자에게 문의하세요.</small></div>';
+    return;
+  }
+
+  let html = '';
+  treeData.forEach((yearGroup, yi) => {
+    const isFirstYear = (yi === 0);
+    html += `
+      <div class="year-group">
+        <div class="year-header" onclick="toggleYear(${yi})">
+          <span>📅 ${yearGroup.year}년 (${yearGroup.months.length}건)</span>
+          <span class="year-arrow ${isFirstYear ? 'open' : ''}" id="yarrow-${yi}">▼</span>
+        </div>
+        <div class="month-list ${isFirstYear ? 'open' : ''}" id="ymonths-${yi}">
+    `;
+    yearGroup.months.forEach((m, mi) => {
+      html += `
+        <div class="month-item" id="mitem-${yi}-${mi}" onclick="selectMonth(${yi},${mi})">
+          <div>
+            <div class="m-label">${m.label}</div>
+            <div class="m-sub">${m.file.name} &nbsp;·&nbsp; ${m.file.size}</div>
+          </div>
+          <span class="pdf-badge">PDF</span>
+        </div>
+      `;
+    });
+    html += '</div></div>';
+  });
+
+  wrap.innerHTML = html;
+}
+
+// 연도 그룹 접기/펼치기
+function toggleYear(yi) {
+  const months = document.getElementById('ymonths-' + yi);
+  const arrow  = document.getElementById('yarrow-' + yi);
+  const isOpen = months.classList.toggle('open');
+  arrow.classList.toggle('open', isOpen);
+}
+
+// ══════ 월 선택 ══════
+function selectMonth(yi, mi) {
+  // 이전 선택 해제
+  document.querySelectorAll('.month-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('mitem-' + yi + '-' + mi).classList.add('active');
+
+  const monthObj   = treeData[yi].months[mi];
+  selectedFile     = monthObj.file;
+
+  document.getElementById('v-period').textContent   = monthObj.label;
+  document.getElementById('v-filename').textContent = selectedFile.name;
+  document.getElementById('v-meta').textContent     =
+    '파일 크기: ' + selectedFile.size + '  ·  등록일: ' + selectedFile.createdAt;
+
+  document.getElementById('viewer-placeholder').classList.add('hidden');
+  document.getElementById('viewer-content').classList.remove('hidden');
+
+  // iframe 초기화
+  const frame = document.getElementById('pdf-frame');
+  frame.style.display = 'none';
+  frame.src = '';
+
+  const btn = document.getElementById('btn-dl');
+  btn.textContent = '⬇ 다운로드';
+  btn.disabled = false;
+  btn.style.background = '';
+}
+
+// ══════ 요약 카드 업데이트 ══════
+function updateSummary() {
+  let total = 0;
+  treeData.forEach(y => { total += y.months.length; });
+  document.getElementById('sum-total').textContent = total + '건';
+
+  if (treeData.length > 0) {
+    const oldest = treeData[treeData.length - 1].year;
+    const newest = treeData[0].year;
+    document.getElementById('sum-years').textContent =
+      oldest === newest ? oldest + '년' : oldest + ' ~ ' + newest;
+
+    const latestGroup = treeData[0];
+    if (latestGroup.months.length > 0) {
+      document.getElementById('sum-latest').textContent = latestGroup.months[0].label;
+    }
+  }
+}
+
+// ══════ PDF 열람 (구글 드라이브 미리보기) ══════
+function viewPdf() {
+  if (!selectedFile) return;
+  const frame = document.getElementById('pdf-frame');
+
+  // 이미 열려있으면 닫기
+  if (frame.style.display === 'block') {
+    frame.style.display = 'none';
+    frame.src = '';
+    return;
+  }
+
+  showToast('PDF를 불러오는 중입니다...');
+
+  // 구글 드라이브 미리보기 URL 직접 사용 (크롬 Blob 차단 우회)
+  const previewUrl = "https://drive.google.com/file/d/" + selectedFile.id + "/preview";
+  frame.src = previewUrl;
+  frame.style.display = 'block';
+  showToast('정산서를 불러왔습니다.');
+}
+
+// ══════ PDF 다운로드 (구글 드라이브 직접 다운로드) ══════
+function downloadPdf() {
+  if (!selectedFile) return;
+  const btn = document.getElementById('btn-dl');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 다운로드 중...';
+
+  // 구글 드라이브 직접 다운로드 URL
+  const downloadUrl = "https://drive.google.com/uc?export=download&id=" + selectedFile.id;
+  const a = document.createElement('a');
+  a.href = downloadUrl;
+  a.download = selectedFile.name;
+  a.target = '_blank';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+
+  btn.textContent = '✓ 완료';
+  btn.style.background = '#2E7D32';
+  setTimeout(() => {
+    btn.textContent = '⬇ 다운로드';
+    btn.style.background = '';
+    btn.disabled = false;
+  }, 2500);
+}
+
+// ══════ 비밀번호 변경 ══════
+function togglePwForm() {
+  const form  = document.getElementById('pw-form');
+  const arrow = document.getElementById('pw-arrow');
+  const open  = form.classList.toggle('open');
+  arrow.textContent = open ? '▲' : '▼';
+}
+
+function changePassword() {
+  const cur = document.getElementById('pw-current').value;
+  const nw  = document.getElementById('pw-new').value;
+  const cf  = document.getElementById('pw-confirm').value;
+  if (!cur || !nw || !cf) { setPwMsg('err', '모든 항목을 입력하세요.'); return; }
+  if (nw !== cf)           { setPwMsg('err', '새 비밀번호가 일치하지 않습니다.'); return; }
+  if (nw.length < 4)       { setPwMsg('err', '새 비밀번호는 4자 이상이어야 합니다.'); return; }
+
+  google.script.run
+    .withSuccessHandler(res => {
+      if (res.success) {
+        setPwMsg('ok', '✓ 비밀번호가 변경되었습니다.');
+        ['pw-current','pw-new','pw-confirm'].forEach(id => document.getElementById(id).value = '');
+      } else {
+        setPwMsg('err', res.message || '변경 실패');
+      }
+    })
+    .withFailureHandler(() => setPwMsg('err', '서버 오류'))
+    .changePassword(currentUser.userId, cur, nw);
+}
+
+// ══════ 유틸 ══════
+function base64ToUint8(b64) {
+  const s = atob(b64); const a = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) a[i] = s.charCodeAt(i);
+  return a;
+}
+
+function showErr(el, msg) { el.textContent = msg; el.classList.remove('hidden'); }
+
+function setPwMsg(type, msg) {
+  const el = document.getElementById('pw-msg');
+  el.textContent = msg; el.className = 'pw-msg ' + type;
+}
+
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('inp-pw').addEventListener('keydown', e => { if (e.key==='Enter') doLogin(); });
+  document.getElementById('inp-id').addEventListener('keydown', e => { if (e.key==='Enter') document.getElementById('inp-pw').focus(); });
+});
+</script>
+</body>
+</html>
